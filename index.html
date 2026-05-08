@@ -104,7 +104,6 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
   </div>
   <div class="s">
     <button class="lk un" id="lockBtn" onclick="toggleLock()">🔓 未锁定</button>
-    <button class="lk" style="background:#e0e0e0;color:#555;font-size:11px;padding:3px 6px;" onclick="changePassword()" title="修改密码">🔑</button>
   </div>
 </div>
 
@@ -231,7 +230,6 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
 <div class="modal" id="storeModal">
   <div class="modal-content">
     <h3>门店管理</h3>
-    <h4 style="font-size:14px;color:#555;margin-bottom:8px;">📋 当前门店列表</h4>
     <div id="storeList" style="margin-bottom:12px;max-height:200px;overflow-y:auto;"></div>
     <hr style="border:none;border-top:1px solid #eee;margin-bottom:12px;">
     <input type="text" id="newStoreName" placeholder="新门店名称">
@@ -315,28 +313,6 @@ function init() {
   // 默认本月
   const n = new Date();
   curMonth = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0');
-
-  // 密码验证（移动端prompt可能被拦截，用try-catch保护）
-  try {
-    const pw = localStorage.getItem('shopAccount_password');
-    if (pw) {
-      const entered = prompt('请输入访问密码：');
-      if (entered === null) return;
-      if (entered !== pw) {
-        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px;padding:20px;background:#f5f7fa;"><div style="font-size:48px;">🔒</div><h2 style="color:#c62828;">密码错误</h2><p style="color:#888;font-size:14px;text-align:center;">请联系管理员获取正确的密码</p></div>';
-        return;
-      }
-    } else {
-      const setPw = prompt('首次使用，请设置一个访问密码（留空跳过）：');
-      if (setPw && setPw.trim()) {
-        localStorage.setItem('shopAccount_password', setPw.trim());
-        alert('密码设置成功！下次打开需要输入密码。');
-      }
-    }
-  } catch(e) {
-    // prompt不可用时跳过密码验证
-    console.log('密码验证跳过', e);
-  }
 
   load();
   render();
@@ -679,8 +655,8 @@ function calcAll() {
   });
 
   // 【核心修正公式】
-  // 账面应余额 = 上月结余 - 上月应付未付 + 本月总收入 - 本月已付总支出
-  const bookBal = lastBal - lastUnpaid + totalInc - paidAll;
+  // 账面应余额 = 上月结余 - 上月应付 + 剩余未付上月 + 总收入 - 已付
+  const bookBal = lastBal - lastUnpaid + remainingLastUnpaid + totalInc - paidAll;
 
   // 盘盈/盘亏 = 资金总余额 - 账面应余额
   const diff = bookBal - fundTotal;
@@ -723,7 +699,7 @@ function calcAll() {
   KV('fundSummary').innerHTML = `
     <div class="fs-row"><span>资金总余额（11个账户）</span><span class="v b">¥${fundTotal.toFixed(2)}</span></div>
     <div class="fs-row"><span>上月净结余 = 上月结余 - 上月应付未付</span><span class="v g">¥${lastNetBal.toFixed(2)}</span></div>
-    <div class="fs-row"><span>账面应余额 = 上月结余 - 上月应付 + 总收入 - 已付</span><span class="v g">¥${bookBal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>账面应余额 = 上月结余 - 上月应付 + 剩余未付上月 + 总收入 - 已付</span><span class="v g">¥${bookBal.toFixed(2)}</span></div>
     <div class="fs-row"><span>盘盈/盘亏 = 账面应余额 - 资金总余额</span><span class="v ${diff>=0?'r':'g'}">¥${diff.toFixed(2)} ${diff>0?'(盘亏)':diff<0?'(盘盈)':'(相符)'}</span></div>
     <div class="fs-row"><span>可支配结余 = 资金 - 应付（不含奖金）- 上月应付未付</span><span class="v b">¥${currBal.toFixed(2)}</span></div>
     <div class="fs-row"><span>月底结余 = 资金 - 应付（不含奖金）- 奖金 - 上月应付未付</span><span class="v o">¥${endBal.toFixed(2)}</span></div>
@@ -906,36 +882,31 @@ function renderStoreSelect(stores) {
 
 function addStore() {
   KV('newStoreName').value = '';
-  // 渲染门店列表（带删除按钮）
-  const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
+  const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["\u9ED8\u8BA4\u95E8\u5E97"]');
   const list = KV('storeList');
   list.innerHTML = stores.map((s, i) => {
-    const isCurrent = s === curStore;
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;border-bottom:1px solid #eee;">' +
-      '<span style="font-size:14px;">' + (isCurrent ? '▶ ' : '') + s + '</span>' +
-      (i > 0 ? '<button onclick="confirmDeleteStore('' + s + '')" style="background:#f44336;color:#fff;border:none;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer;">🗑 删除</button>' : '') +
+      '<span style="font-size:14px;">' + s + '</span>' +
+      (i > 0 ? '<button onclick="deleteStoreHandler(\'' + s + '\')" style="background:#f44336;color:#fff;border:none;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer;">删除</button>' : '') +
       '</div>';
   }).join('');
   KV('storeModal').classList.add('show');
 }
 
-function confirmDeleteStore(storeName) {
-  if (!confirm('确定删除门店「' + storeName + '」？该门店所有数据将被删除，无法恢复！')) return;
-  const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
-  const idx = stores.indexOf(storeName);
+function deleteStoreHandler(storeName) {
+  if (!confirm('确定删除门店「' + storeName + '」？该门店所有数据将被删除！')) return;
+  var stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["\u9ED8\u8BA4\u95E8\u5E97"]');
+  var idx = stores.indexOf(storeName);
   if (idx > -1) {
     stores.splice(idx, 1);
     localStorage.setItem('shopAccount_stores', JSON.stringify(stores));
     localStorage.removeItem(STORAGE_KEY + '_' + storeName);
-    if (curStore === storeName) {
-      curStore = stores[0];
-    }
+    if (curStore === storeName) curStore = stores[0];
     renderStoreSelect(stores);
     KV('storeSel').value = curStore;
-    load();
-    render();
-    addStore(); // 刷新门店弹窗
-    alert('门店「' + storeName + '」已删除！');
+    load(); render();
+    addStore();
+    alert('门店已删除！');
   }
 }
 
@@ -1061,22 +1032,6 @@ function addSalaryItem() {
   } else if (customStaffItems.includes(name)) {
     alert('该项目已存在！');
   }
-}
-
-function changePassword() {
-  try {
-    const oldPw = localStorage.getItem('shopAccount_password');
-    if (oldPw) {
-      const check = prompt('请输入当前密码：');
-      if (check === null) return;
-      if (check !== oldPw) { alert('当前密码错误！'); return; }
-    }
-    const newPw = prompt('请输入新密码（留空取消）：');
-    if (newPw && newPw.trim()) {
-      localStorage.setItem('shopAccount_password', newPw.trim());
-      alert('密码修改成功！');
-    }
-  } catch(e) { alert('密码功能不可用：' + e.message); }
 }
 
 // 全局错误处理
