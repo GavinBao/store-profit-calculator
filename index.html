@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>门店月度收支盈利计算工具</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif}
+body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px 10px 80px;min-height:100vh;overflow-x:hidden}
+
+/* Header */
+.hd{background:#fff;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.hd .t{font-size:16px;font-weight:600;color:#1a237e;display:flex;align-items:center;gap:5px}
+.hd .t select{font-size:12px;padding:4px 6px;border-radius:5px;border:1px solid #ddd;margin-left:8px}
+.hd .s{display:flex;gap:8px;align-items:center}
+.hd .s .lk{font-size:11px;color:#fff;background:#f56c6c;padding:3px 8px;border-radius:10px;cursor:pointer;border:none}
+.hd .s .lk.un{background:#67c23a}
+.hd .s .lk span{font-size:10px}
+
+/* Month bar */
+.mb{display:flex;align-items:center;justify-content:center;gap:14px;padding:8px;background:#fff;border-radius:10px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.mb .ar{font-size:18px;cursor:pointer;color:#555;padding:2px 10px;user-select:none;background:#f5f5f5;border-radius:5px}
+.mb .mt{font-size:14px;font-weight:600;min-width:110px;text-align:center;color:#1a237e}
+
+/* KPI 3-column */
+.kpi{gap:5px;display:flex;flex-direction:column;margin-bottom:8px}
+.kpi-r{display:flex;gap:5px}
+.kpi-r .kc{flex:1;min-width:0;background:#fff;border-radius:8px;padding:7px 8px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+.kc .lb{font-size:9px;color:#888;margin-bottom:1px;white-space:nowrap}
+.kc .amt{font-size:13px;font-weight:700}
+.kc.grn .amt{color:#2e7d32}.kc.red .amt{color:#c62828}.kc.blu .amt{color:#1565c0}.kc.org .amt{color:#e65100}.kc.ppl .amt{color:#6a1b9a}.kc.ylw .amt{color:#f57f17}
+
+/* Section */
+.sec{background:#fff;margin:8px 0;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.sh{padding:10px 14px 3px;display:flex;justify-content:space-between;align-items:center}
+.sh .l{font-size:14px;font-weight:600;display:flex;align-items:center;gap:5px}
+.sh .l .ico{font-size:15px}
+.sh .r{font-size:10px;color:#999;background:#f5f5f5;padding:1px 6px;border-radius:6px}
+.sb{padding:3px 14px 10px}
+
+/* Grid */
+.gr{display:grid;gap:6px}
+.gr2{grid-template-columns:1fr 1fr 1fr}
+.gr3{grid-template-columns:1fr 1fr 1fr}
+.gr4{grid-template-columns:1fr 1fr 1fr}
+.gi{background:#f9fafb;border-radius:6px;padding:5px 6px;border:1px solid #eee}
+.gi .nm{font-size:11px;font-weight:500;color:#555;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gi .ir{display:flex;align-items:center;gap:2px}
+.gi input{width:100%;min-width:0;padding:3px 4px;border:1px solid #ddd;border-radius:4px;font-size:12px;text-align:right;background:#fff}
+.gi input:focus{outline:none;border-color:#3949ab;background:#fff}
+.gi .tag{font-size:12px;padding:4px 8px;border-radius:6px;cursor:pointer;border:none;height:28px;display:inline-flex;align-items:center;line-height:1;flex-shrink:0}
+.gi .tag.pa{background:#e8f5e9;color:#2e7d32}
+.gi .tag.un{background:#fff3e0;color:#e65100}
+
+/* Stat rows */
+.stat-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}
+.stat-row:last-child{border:none}
+.stat-row .v{font-weight:600}
+.stat-row .v.g{color:#2e7d32}.stat-row .v.r{color:#c62828}.stat-row .v.b{color:#1565c0}
+
+/* Fund summary */
+.fund-summary{background:#f0f4ff;border-radius:6px;padding:6px 8px;margin-top:5px;border:1px solid #dde8ff}
+.fs-row{display:flex;justify-content:space-between;font-size:11px;padding:2px 0}
+.fs-row .v{font-weight:600}
+.fs-row .v.g{color:#2e7d32}.fs-row .v.r{color:#c62828}.fs-row .v.b{color:#1565c0}.fs-row .v.o{color:#e65100}
+
+/* Buttons */
+.act-row{display:flex;gap:5px;margin-top:6px;justify-content:flex-end;flex-wrap:wrap}
+.act-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:none;cursor:pointer;background:#f0f0f0;color:#555}
+.act-btn.pr{background:#409eff;color:#fff}
+.act-btn.dg{background:#f56c6c;color:#fff}
+.act-btn.yl{background:#e6a23c;color:#fff}
+.act-btn.pp{background:#9c27b0;color:#fff}
+
+.sec .sh .r.add-btn{cursor:pointer;background:#9c27b0;color:#fff;padding:2px 8px}
+.sec .sh .r.add-btn:hover{background:#7b1fa2}
+
+/* Modal */
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:1000}
+.modal.show{display:flex}
+.modal-content{background:#fff;padding:20px;border-radius:8px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-content h3{margin-bottom:15px}
+.modal-content textarea{width:100%;height:200px;margin-bottom:10px;font-size:12px;padding:8px;border:1px solid #ddd;border-radius:4px}
+.modal-content .btn-row{display:flex;gap:10px;justify-content:flex-end;margin-top:10px}
+.modal-content button{padding:8px 16px;border:none;border-radius:4px;cursor:pointer}
+.modal-content input{width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;margin-bottom:10px}
+
+/* Custom items */
+.custom-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
+.custom-item-name{flex:1}
+.custom-item .del-btn{background:#f44336;color:#fff;border:none;border-radius:3px;padding:3px 8px;font-size:11px;cursor:pointer}
+.custom-items-list{max-height:200px;overflow-y:auto;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hd">
+  <div class="t">
+    📊 门店收支盈利计算
+    <select id="storeSel" onchange="switchStore(this.value)">
+      <option value="默认门店">默认门店</option>
+    </select>
+  </div>
+  <div class="s">
+    <button class="lk un" id="lockBtn" onclick="toggleLock()">🔓 未锁定</button>
+  </div>
+</div>
+
+<!-- Month bar -->
+<div class="mb">
+  <span class="ar" onclick="chgMonth(-1)">◀</span>
+  <span class="mt" id="monthDisplay"></span>
+  <span class="ar" onclick="chgMonth(1)">▶</span>
+</div>
+
+<!-- KPI 3列 -->
+<div class="kpi" id="kpiArea"></div>
+
+<!-- Income -->
+<div class="sec">
+  <div class="sh"><div class="l"><span class="ico">💰</span> 收入</div><div class="r">2×3</div></div>
+  <div class="sb">
+    <div class="gr gr2" id="incomeGrid"></div>
+  </div>
+</div>
+
+<!-- Expense -->
+<div class="sec">
+  <div class="sh"><div class="l"><span class="ico">💸</span> 支出</div><div class="r" id="expCount">4×3</div></div>
+  <div class="sb">
+    <div class="gr gr4" id="expenseGrid"></div>
+    <div class="act-row">
+      <button class="act-btn pp" onclick="addExpenseItem()">+ 添加支出项</button>
+      <button class="act-btn pp" onclick="openCustomItems()">⚙️ 自定义</button>
+    </div>
+  </div>
+</div>
+
+<!-- Salary -->
+<div class="sec">
+  <div class="sh"><div class="l"><span class="ico">👥</span> 人工工资</div><div class="r">3×3</div></div>
+  <div class="sb">
+    <div class="gr gr3" id="salaryGrid"></div>
+    <div class="stat-row"><span>工资支出合计</span><span class="v r" id="salaryTotal">0.00</span></div>
+    <div class="act-row">
+      <button class="act-btn pp" onclick="addSalaryItem()">+ 添加人工</button>
+      <button class="act-btn pp" onclick="openCustomStaffItems()">⚙️ 自定义</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bonus -->
+<div class="sec">
+  <div class="sh"><div class="l"><span class="ico">🎁</span> 月底奖金</div></div>
+  <div class="sb">
+    <div class="gi" style="display:flex;align-items:center;gap:6px;padding:6px 10px;max-width:280px">
+      <span class="nm" style="margin:0">月底奖金</span>
+      <input type="text" inputmode="decimal" step="0.01" id="bonusInput" style="flex:1;padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:13px;text-align:right" oninput="valBonus()">
+      <span class="tag pa" data-pkey="bonus_paid" id="bonusTag">已付</span>
+    </div>
+  </div>
+</div>
+
+<!-- Fund -->
+<div class="sec">
+  <div class="sh"><div class="l"><span class="ico">🏦</span> 资金余额</div><div class="r">4×3</div></div>
+  <div class="sb">
+    <div class="gr gr4" id="fundGrid"></div>
+    <!-- 上月应付未付区域 -->
+    <div class="gr" style="grid-template-columns:1fr 1fr;margin-top:6px;">
+      <div class="gi"><div class="nm">上月应付未付总额</div><div class="ir"><input type="text" inputmode="decimal" step="0.01" id="lastUnpaid" value="" oninput="upd('lastUnpaid',this)" onfocus="this.select()"></div></div>
+      <div class="gi"><div class="nm">本月偿还上月应付款</div><div class="ir"><input type="text" inputmode="decimal" step="0.01" id="payLastDebt" value="" oninput="upd('payLastDebt',this)" onfocus="this.select()"></div></div>
+    </div>
+    <div class="fund-summary" id="fundSummary"></div>
+    <div class="act-row">
+      <button class="act-btn pp" onclick="addStore()">+ 新门店</button>
+      <button class="act-btn pr" onclick="exportAllData()">📤 导出</button>
+      <button class="act-btn yl" onclick="importData()">📥 导入</button>
+      <button class="act-btn dg" onclick="deleteMonth()">🗑 删除</button>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;color:#bbb;font-size:10px;padding:8px">数据存储在浏览器本地，关闭不丢失</div>
+
+<!-- 导出/导入 Modal -->
+<div class="modal" id="dataModal">
+  <div class="modal-content">
+    <h3 id="modalTitle">导出数据</h3>
+    <textarea id="modalText" placeholder="数据将显示在这里..."></textarea>
+    <div class="btn-row">
+      <button style="background:#ccc;" onclick="closeModal()">关闭</button>
+      <button style="background:#2196F3;color:#fff;" id="modalConfirm" onclick="confirmModal()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 自定义支出项 Modal -->
+<div class="modal" id="customModal">
+  <div class="modal-content">
+    <h3>⚙️ 自定义支出项</h3>
+    <div class="custom-items-list" id="customItemsList"></div>
+    <div style="display:flex;gap:5px;">
+      <input type="text" id="newItemName" placeholder="新支出项名称">
+      <button class="act-btn pp" onclick="addCustomItem()">添加</button>
+    </div>
+    <div class="btn-row">
+      <button style="background:#4CAF50;color:#fff;" onclick="saveCustomItems()">保存并关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 自定义人工项 Modal -->
+<div class="modal" id="staffModal">
+  <div class="modal-content">
+    <h3>⚙️ 自定义人工项</h3>
+    <div class="custom-items-list" id="customStaffItemsList"></div>
+    <div style="display:flex;gap:5px;">
+      <input type="text" id="newStaffItemName" placeholder="新人工项名称">
+      <button class="act-btn pp" onclick="addCustomStaffItem()">添加</button>
+    </div>
+    <div class="btn-row">
+      <button style="background:#4CAF50;color:#fff;" onclick="saveCustomStaffItems()">保存并关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 添加门店 Modal -->
+<div class="modal" id="storeModal">
+  <div class="modal-content">
+    <h3>添加新门店</h3>
+    <input type="text" id="newStoreName" placeholder="门店名称">
+    <div class="btn-row">
+      <button style="background:#ccc;" onclick="closeStoreModal()">取消</button>
+      <button style="background:#2196F3;color:#fff;" onclick="confirmStore()">确认</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'shop_book_profit_v2';
+
+// 配置
+const INCO_KEY = ['d','mt','tb','jd','dy','oi'];
+const INCO_LB = ['堂食','美团','淘宝','京东','抖音','其他'];
+const EXP_KEY = ['cp1','cp2','yl','jh','dz','fz','ptyj','sdf','wyf','zc','zf','ot1','ot2'];
+const EXP_LB = ['菜品成本','菜品成本2','饮料','进货','店租','房租','平台佣金','水电费','物业费','自采','杂费','其他1','其他2'];
+const STAFF_KEY = ['s1','s2','s3','s4','s5','s6','s7','s8','s9'];
+const STAFF_LB = ['人工1','人工2','人工3','人工4','人工5','人工6','人工7','人工8','人工9'];
+const FUND_KEY = ['abc','ccbg','ccbs','other','cash','wx','zfb','sb','jd','tb','mt','last'];
+const FUND_LB = ['农业银行','建设银行(公)','建设银行','其他','现金','微信','支付宝','扫呗','京东','淘宝','美团','上月结余'];
+
+let data = {}, curMonth = '', curStore = '默认门店';
+let customItems = [];
+let customStaffItems = [];
+let modalMode = '';
+let staffCount = 9;
+
+// 工具函数
+const KV = k => document.getElementById(k);
+const vv = x => parseFloat(x)||0;
+const vs = x => x.toFixed(2);
+
+// ========== 初始化 ==========
+function init() {
+  // 检测 localStorage 可用性
+  try {
+    localStorage.setItem('__test__', '1');
+    localStorage.removeItem('__test__');
+  } catch(e) {
+    document.body.innerHTML = `
+      <div style="padding:40px 20px;text-align:center;color:#c62828;">
+        <h2>⚠️ 存储不可用</h2>
+        <p style="margin:20px 0;color:#555;">当前浏览器不支持本地存储，可能是：</p>
+        <ul style="text-align:left;display:inline-block;color:#666;line-height:2;">
+          <li>🔒 隐私/无痕浏览模式</li>
+          <li>🍎 iOS Safari 首次打开本地文件</li>
+          <li>🚫 浏览器禁用了存储功能</li>
+          <li>📱 某些移动端浏览器限制</li>
+        </ul>
+        <p style="margin:30px 0;color:#888;">请尝试：</p>
+        <ul style="text-align:left;display:inline-block;color:#666;line-height:2;">
+          <li>▶️ 切换到普通浏览模式</li>
+          <li>📤 先导出数据备份</li>
+          <li>💻 使用电脑浏览器打开</li>
+        </ul>
+      </div>
+    `;
+    return;
+  }
+
+  // 加载门店列表
+  const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
+  renderStoreSelect(stores);
+
+  // 加载自定义支出项
+  customItems = JSON.parse(localStorage.getItem('shopAccount_customItems') || 'null');
+  if(!customItems) {
+    customItems = [...EXP_LB];
+    localStorage.setItem('shopAccount_customItems', JSON.stringify(customItems));
+  }
+
+  // 加载自定义人工项
+  customStaffItems = JSON.parse(localStorage.getItem('shopAccount_customStaffItems') || 'null');
+  if(!customStaffItems) {
+    customStaffItems = [...STAFF_LB];
+    localStorage.setItem('shopAccount_customStaffItems', JSON.stringify(customStaffItems));
+  }
+
+  // 默认本月
+  const n = new Date();
+  curMonth = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0');
+
+  load();
+  render();
+}
+
+// ========== 数据加载/保存 ==========
+function load() {
+  const key = STORAGE_KEY + '_' + curStore;
+  try { data = JSON.parse(localStorage.getItem(key))||{}; } catch(e) { data = {}; }
+}
+
+function save() {
+  const key = STORAGE_KEY + '_' + curStore;
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function md(m) {
+  if (!data[m]) {
+    let lb = 0;
+    const prev = prevMonth(m);
+    if (prev && data[prev]) {
+      // 计算上月资金总额作为本月初始结余
+      lb = Object.keys(FUND_KEY).reduce((s,_,i) => {
+        const k = FUND_KEY[i];
+        if (k === 'last') return s;
+        return s + vv(data[prev]['fund_'+k]);
+      }, 0);
+    }
+    data[m] = { lock: false, lastBal: lb };
+    save();
+  }
+  return data[m];
+}
+
+function prevMonth(m) {
+  const p = m.split('-');
+  let y = parseInt(p[0]), mon = parseInt(p[1]) - 1;
+  if (mon === 0) { mon = 12; y--; }
+  return y + '-' + String(mon).padStart(2,'0');
+}
+
+// ========== 渲染 ==========
+function render() {
+  md(curMonth);
+  const d = data[curMonth];
+
+  // Month display
+  const p = curMonth.split('-');
+  KV('monthDisplay').textContent = p[0]+'年'+p[1]+'月';
+
+  // Lock button
+  const lk = KV('lockBtn');
+  if (d.lock) {
+    lk.className = 'lk'; lk.innerHTML = '🔒 已锁定';
+  } else {
+    lk.className = 'lk un'; lk.innerHTML = '🔓 未锁定';
+  }
+
+  // Income
+  let ih = '';
+  INCO_KEY.forEach((k,i) => {
+    ih += `<div class="gi"><div class="nm">${INCO_LB[i]}</div><div class="ir"><input type="text" inputmode="decimal" step="0.01" value="${vv(d['inc_'+k])}" oninput="upd('inc_${k}',this)" onfocus="this.select()" ${d.lock?'disabled':''}></div></div>`;
+  });
+  KV('incomeGrid').innerHTML = ih;
+
+  // Expense (使用自定义项)
+  let eh = '';
+  const expCount = Math.ceil(customItems.length / 3);
+  KV('expCount').textContent = `${expCount}×3`;
+  customItems.forEach((name, i) => {
+    const key = 'exp_' + i;
+    const paid = d['exp_paid_'+i];
+    const cls = paid === true ? 'pa' : paid === false ? 'un' : '';
+    const txt = paid === true ? '已付' : paid === false ? '未付' : '';
+    eh += `<div class="gi"><div class="nm">${name}</div>
+      <div class="ir">
+        <input type="text" inputmode="decimal" step="0.01" value="${vv(d[key])}" oninput="upd('${key}',this)" onfocus="this.select()" ${d.lock?'disabled':''}>
+        <span class="tag ${cls}" data-pkey="exp_paid_${i}" style="${d.lock?'pointer-events:none;opacity:0.5':''}">${txt||'✔'}</span>
+      </div></div>`;
+  });
+  KV('expenseGrid').innerHTML = eh;
+
+  // Salary (使用自定义项)
+  let sh = '';
+  const staffCount = Math.ceil(customStaffItems.length / 3);
+  document.querySelector('.sec:nth-of-type(4) .sh .r').textContent = `${staffCount}×3`;
+  customStaffItems.forEach((name, i) => {
+    const key = 'staff_' + i;
+    const paid = d['staff_paid_'+i];
+    const cls = paid === true ? 'pa' : paid === false ? 'un' : '';
+    const txt = paid === true ? '已付' : paid === false ? '未付' : '';
+    sh += `<div class="gi"><div class="nm">${name}</div>
+      <div class="ir">
+        <input type="text" inputmode="decimal" step="0.01" value="${vv(d[key])}" oninput="upd('${key}',this)" onfocus="this.select()" ${d.lock?'disabled':''}>
+        <span class="tag ${cls}" data-pkey="staff_paid_${i}" style="${d.lock?'pointer-events:none;opacity:0.5':''}">${txt||'✔'}</span>
+      </div></div>`;
+  });
+  KV('salaryGrid').innerHTML = sh;
+
+  // Salary total
+  let st = 0;
+  customStaffItems.forEach((name, i) => st += vv(d['staff_'+i]));
+  KV('salaryTotal').textContent = st.toFixed(2);
+
+  // Bonus
+  KV('bonusInput').value = vv(d['bonus'])||'';
+  KV('bonusInput').disabled = d.lock;
+  const bpaid = d['bonus_paid'];
+  const bcls = bpaid === true ? 'pa' : bpaid === false ? 'un' : '';
+  const btxt = bpaid === true ? '已付' : bpaid === false ? '未付' : '✔';
+  KV('bonusTag').className = 'tag '+(bcls||'');
+  KV('bonusTag').textContent = btxt;
+  KV('bonusTag').setAttribute('data-pkey', 'bonus_paid');
+
+  // Fund
+  let fh = '';
+  FUND_KEY.forEach((k,i) => {
+    fh += `<div class="gi"><div class="nm">${FUND_LB[i]}</div><div class="ir"><input type="text" inputmode="decimal" step="0.01" value="${vv(d['fund_'+k])}" oninput="upd('fund_${k}',this)" onfocus="this.select()" ${d.lock?'disabled':''}></div></div>`;
+  });
+  KV('fundGrid').innerHTML = fh;
+
+  // 新增：上月应付未付 + 本月偿还上月
+  KV('lastUnpaid').value = vv(d['lastUnpaid'])||'';
+  KV('lastUnpaid').disabled = d.lock;
+  KV('payLastDebt').value = vv(d['payLastDebt'])||'';
+  KV('payLastDebt').disabled = d.lock;
+
+  // 新增输入框也支持公式计算 - 需要重新绑定 (已经在 upd 函数中处理了)
+
+  calcAll();
+}
+
+// ========== 交互事件 ==========
+function switchStore(store) {
+  curStore = store;
+  load();
+  render();
+}
+
+function switchMonth(m) {
+  curMonth = m;
+  render();
+}
+
+function chgMonth(d) {
+  const p = curMonth.split('-');
+  let y = parseInt(p[0]), mon = parseInt(p[1]) + d;
+  if (mon > 12) { mon = 1; y++; }
+  if (mon < 1) { mon = 12; y--; }
+  curMonth = y + '-' + String(mon).padStart(2,'0');
+  load();
+  render();
+}
+
+function toggleLock() {
+  const d = data[curMonth];
+  if (!d) return;
+  d.lock = !d.lock;
+  save();
+  render();
+}
+
+// 新增月份
+function addMonth() {
+  const y = prompt('输入年份', new Date().getFullYear());
+  if (!y) return;
+  const mon = prompt('输入月份', String(new Date().getMonth()+1));
+  if (!mon) return;
+  const m = y + '-' + String(mon).padStart(2,'0');
+  if (data[m]) { alert('该月份已存在'); return; }
+  md(m);
+  save();
+  curMonth = m;
+  render();
+}
+
+function deleteMonth() {
+  if (Object.keys(data).length <= 1) { alert('至少保留一个月份'); return; }
+  if (!confirm('确定删除 '+curStore+' '+curMonth+' 的数据？不可恢复！')) return;
+  delete data[curMonth];
+  save();
+  curMonth = Object.keys(data).sort().reverse()[0];
+  render();
+}
+
+// ========== 数据更新 ==========
+const calcDebounce = {};
+
+function upd(key, el) {
+  const d = md(curMonth);
+  const raw = el.value.trim();
+  d[key] = parseFloat(el.value)||0;
+
+  if (calcDebounce[key]) clearTimeout(calcDebounce[key]);
+
+  if (/[+\-*/]/.test(raw) && raw.length > 1) {
+    calcDebounce[key] = setTimeout(() => {
+      const curRaw = el.value.trim();
+      try {
+        if (/^[\d+\-*/().% ]+$/.test(curRaw)) {
+          const result = Function('"use strict"; return (' + curRaw + ')')();
+          if (isFinite(result)) {
+            el.value = Math.round(result * 100) / 100;
+            d[key] = parseFloat(el.value)||0;
+          }
+        }
+      } catch(e) {}
+      afterUpd(key);
+    }, 1200);
+    return;
+  }
+
+  afterUpd(key);
+}
+
+function afterUpd(key) {
+  const d = md(curMonth);
+  if (key.startsWith('staff') && !key.startsWith('staff_paid')) {
+    let st = 0;
+    customStaffItems.forEach((name, i) => st += vv(d['staff_'+i]));
+    KV('salaryTotal').textContent = st.toFixed(2);
+  }
+  calcAll();
+  save();
+}
+
+function togglePaid(key) {
+  const d = md(curMonth);
+  const cur = d[key];
+  if (cur === true) d[key] = false;
+  else if (cur === false) d[key] = undefined;
+  else d[key] = true;
+  save();
+  render();
+}
+
+let bonusTimer = null;
+function valBonus() {
+  const d = md(curMonth);
+  const el = KV('bonusInput');
+  d['bonus'] = parseFloat(el.value)||0;
+
+  const raw = el.value.trim();
+  if (bonusTimer) clearTimeout(bonusTimer);
+
+  if (/[+\-*/]/.test(raw) && raw.length > 1) {
+    bonusTimer = setTimeout(() => {
+      const curRaw = el.value.trim();
+      try {
+        if (/^[\d+\-*/().% ]+$/.test(curRaw)) {
+          const result = Function('"use strict"; return (' + curRaw + ')')();
+          if (isFinite(result)) {
+            el.value = Math.round(result * 100) / 100;
+            d['bonus'] = parseFloat(el.value)||0;
+          }
+        }
+      } catch(e) {}
+      calcAll();
+      save();
+    }, 1200);
+    return;
+  }
+
+  calcAll();
+  save();
+}
+
+// 事件委托 - 处理已付/未付标签点击
+document.addEventListener('click', function(e) {
+  const tag = e.target.closest('.tag[data-pkey]');
+  if (tag) {
+    const md2 = md(curMonth);
+    if (md2.lock) return;
+    togglePaid(tag.dataset.pkey);
+    return;
+  }
+});
+
+// ========== 计算 ==========
+function calcAll() {
+  const d = md(curMonth);
+  const lastBal = vv(d['fund_last']);
+
+  // 新增：上月应付未付 + 本月偿还上月应付款
+  const lastUnpaid = vv(d['lastUnpaid']);   // 上月应付未付总额
+  const payLastDebt = vv(d['payLastDebt']); // 本月偿还上月应付款
+
+  // 上月实际净结余 = 上月结余 - 上月应付未付
+  const lastNetBal = lastBal - lastUnpaid;
+
+  // 剩余未付上月应付款 = 上月应付未付 - 本月偿还
+  const remainingLastUnpaid = Math.max(0, lastUnpaid - payLastDebt);
+
+  // Income total
+  let totalInc = 0;
+  INCO_KEY.forEach(k => totalInc += vv(d['inc_'+k]));
+
+  // Expense - 自定义项
+  let expPaid = 0, expUnpaid = 0;
+  customItems.forEach((name, i) => {
+    const amt = vv(d['exp_'+i]);
+    const paid = d['exp_paid_'+i];
+    if (paid === true) expPaid += amt;
+    else if (paid === false) expUnpaid += amt;
+  });
+
+  // Staff (使用自定义项)
+  let staPaid = 0, staUnpaid = 0;
+  customStaffItems.forEach((name, i) => {
+    const amt = vv(d['staff_'+i]);
+    const paid = d['staff_paid_'+i];
+    if (paid === true) staPaid += amt;
+    else if (paid === false) staUnpaid += amt;
+  });
+
+  // Bonus
+  const bAmt = vv(d['bonus']);
+  const bPaid = d['bonus_paid'] === true ? bAmt : 0;
+  const bUnpaid = d['bonus_paid'] === false ? bAmt : 0;
+
+  // Total expense
+  let totalExp = 0;
+  customItems.forEach((name, i) => totalExp += vv(d['exp_'+i]));
+  customStaffItems.forEach((name, i) => totalExp += vv(d['staff_'+i]));
+  totalExp += bAmt;
+
+  // Profit
+  const profit = totalInc - totalExp;
+  const profitRate = totalInc > 0 ? (profit / totalInc * 100) : 0;
+
+  // Paid / Unpaid totals（奖金不计入本月应付，单独在月底结余中计算）
+  const paidAll = expPaid + staPaid;  // 已付不含奖金
+  const unpaidAll = expUnpaid + staUnpaid;  // 本月应付不含奖金（奖金单独在月底结余计算）
+
+  // Fund total
+  let fundTotal = 0;
+  FUND_KEY.forEach((k,i) => {
+    if (k === 'last') return;
+    fundTotal += vv(d['fund_'+k]);
+  });
+
+  // 【核心修正公式】
+  // 账面应余额 = 上月结余 - 上月应付未付 + 本月总收入 - 本月已付总支出
+  const bookBal = lastBal - lastUnpaid + totalInc - paidAll;
+
+  // 盘盈/盘亏 = 资金总余额 - 账面应余额
+  const diff = bookBal - fundTotal;
+
+  // 可支配结余 = 资金总余额 - 本月应付（不含奖金）- 剩余未付上月应付款
+  const currBal = fundTotal - unpaidAll - remainingLastUnpaid;
+
+  // 月底结余 = 资金总余额 - 本月应付（不含奖金）- 奖金 - 剩余未结清上月应付款
+  const endBal = fundTotal - unpaidAll - bAmt - remainingLastUnpaid;
+
+  // Render KPI
+  KV('kpiArea').innerHTML = `
+    <div class="kpi-r">
+      <div class="kc ppl"><div class="lb">${curMonth}</div><div class="amt" style="font-size:12px;color:#555">${'上月结余 ¥'+lastBal.toFixed(2)}</div></div>
+      <div class="kc ppl"><div class="lb">上月净结余</div><div class="amt">¥${lastNetBal.toFixed(2)}</div></div>
+      <div class="kc blu"><div class="lb">本月总收入</div><div class="amt">¥${totalInc.toFixed(2)}</div></div>
+      <div class="kc red"><div class="lb">本月总支出</div><div class="amt">¥${totalExp.toFixed(2)}</div></div>
+    </div>
+    <div class="kpi-r">
+      <div class="kc ppl"><div class="lb">上月应付未付</div><div class="amt">¥${lastUnpaid.toFixed(2)}</div></div>
+      <div class="kc ${profit>=0?'grn':'red'}"><div class="lb">净利润</div><div class="amt">¥${profit.toFixed(2)}</div></div>
+      <div class="kc blu"><div class="lb">资金总余额</div><div class="amt">¥${fundTotal.toFixed(2)}</div></div>
+      <div class="kc grn"><div class="lb">已付总支出</div><div class="amt">¥${paidAll.toFixed(2)}</div></div>
+    </div>
+    <div class="kpi-r">
+      <div class="kc org"><div class="lb">本月偿还上月</div><div class="amt">¥${payLastDebt.toFixed(2)}</div></div>
+      <div class="kc ${profitRate>=0?'grn':'red'}"><div class="lb">净利率</div><div class="amt">${profitRate.toFixed(1)}%</div></div>
+      <div class="kc ppl"><div class="lb">账面应余额</div><div class="amt">¥${bookBal.toFixed(2)}</div></div>
+      <div class="kc org"><div class="lb">应付总支出</div><div class="amt">¥${unpaidAll.toFixed(2)}</div></div>
+    </div>
+    <div class="kpi-r">
+      <div class="kc org"><div class="lb">剩余未付上月</div><div class="amt">¥${remainingLastUnpaid.toFixed(2)}</div></div>
+      <div class="kc ${diff>=0?'red':'grn'}"><div class="lb">盘盈/盘亏</div><div class="amt">¥${diff.toFixed(2)}</div></div>
+      <div class="kc blu"><div class="lb">可支配结余</div><div class="amt">¥${currBal.toFixed(2)}</div></div>
+      <div class="kc org"><div class="lb">月底结余</div><div class="amt">¥${endBal.toFixed(2)}</div></div>
+    </div>
+  `;
+
+  // Fund summary
+  KV('fundSummary').innerHTML = `
+    <div class="fs-row"><span>资金总余额（11个账户）</span><span class="v b">¥${fundTotal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>上月净结余 = 上月结余 - 上月应付未付</span><span class="v g">¥${lastNetBal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>账面应余额 = 上月结余 - 上月应付 + 总收入 - 已付</span><span class="v g">¥${bookBal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>盘盈/盘亏 = 账面应余额 - 资金总余额</span><span class="v ${diff>=0?'r':'g'}">¥${diff.toFixed(2)} ${diff>0?'(盘亏)':diff<0?'(盘盈)':'(相符)'}</span></div>
+    <div class="fs-row"><span>可支配结余 = 资金 - 应付（不含奖金）- 剩余上月欠款</span><span class="v b">¥${currBal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>月底结余 = 资金 - 应付（不含奖金）- 奖金 - 剩余上月欠款</span><span class="v o">¥${endBal.toFixed(2)}</span></div>
+  `;
+}
+
+// ========== 导出/导入 ==========
+function exportAllData() {
+  modalMode = 'export';
+  KV('modalTitle').textContent = '📤 导出CSV（手机Excel/WPS打开）';
+
+  const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
+
+  // 构建CSV表头
+  let header = ['门店','月份','锁定','上月结余','上月应付未付','本月偿还上月'];
+  INCO_KEY.forEach((k,i) => header.push(INCO_LB[i]+'(收入)'));
+  customItems.forEach((name, i) => header.push(name+'(支出)'));
+  customItems.forEach((name, i) => header.push(name+'(已付?)'));
+  customStaffItems.forEach((name, i) => header.push(name+'(人工)'));
+  customStaffItems.forEach((name, i) => header.push(name+'(已付?)'));
+  header.push('月底奖金','奖金已付?');
+  FUND_KEY.forEach((k,i) => header.push(FUND_LB[i]+'(资金)'));
+
+  let csv = header.join(',') + '\n';
+
+  // 添加数据行
+  stores.forEach(store => {
+    const key = STORAGE_KEY + '_' + store;
+    const storeData = localStorage.getItem(key);
+    if(!storeData) return;
+    const data = JSON.parse(storeData);
+
+    Object.keys(data).sort().forEach(month => {
+      const d = data[month];
+      let row = [
+        store,
+        month,
+        d.lock ? '是' : '否',
+        vv(d['fund_last']),
+        vv(d['lastUnpaid']),
+        vv(d['payLastDebt'])
+      ];
+      INCO_KEY.forEach(k => row.push(vv(d['inc_'+k])));
+      customItems.forEach((name, i) => row.push(vv(d['exp_'+i])));
+      customItems.forEach((name, i) => row.push(d['exp_paid_'+i]===true?'是':d['exp_paid_'+i]===false?'否':''));
+      customStaffItems.forEach((name, i) => row.push(vv(d['staff_'+i])));
+      customStaffItems.forEach((name, i) => row.push(d['staff_paid_'+i]===true?'是':d['staff_paid_'+i]===false?'否':''));
+      row.push(vv(d['bonus']), d['bonus_paid']===true?'是':d['bonus_paid']===false?'否':'');
+      FUND_KEY.forEach(k => row.push(vv(d['fund_'+k])));
+
+      csv += row.join(',') + '\n';
+    });
+  });
+
+  KV('modalText').value = csv;
+  KV('dataModal').classList.add('show');
+}
+
+function importData() {
+  modalMode = 'import';
+  KV('modalTitle').textContent = '📥 导入CSV（将覆写现有数据！）';
+  KV('modalText').value = '';
+  KV('modalText').placeholder = '请粘贴导出的CSV数据...';
+  KV('dataModal').classList.add('show');
+}
+
+function closeModal() {
+  KV('dataModal').classList.remove('show');
+}
+
+function confirmModal() {
+  if (modalMode === 'import') {
+    try {
+      const csvText = KV('modalText').value.trim();
+      if (!csvText) {
+        alert('导入失败：数据为空！');
+        return;
+      }
+
+      const lines = csvText.split('\n');
+      if (lines.length < 2) {
+        alert('导入失败：CSV格式错误！');
+        return;
+      }
+
+      const header = lines[0].split(',');
+      const stores = new Set();
+
+      // 解析CSV数据
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const values = lines[i].split(',');
+        if (values.length < header.length) continue;
+
+        const store = values[0];
+        const month = values[1];
+        stores.add(store);
+
+        const key = STORAGE_KEY + '_' + store;
+        let data = {};
+        try {
+          const existing = localStorage.getItem(key);
+          if (existing) data = JSON.parse(existing);
+        } catch(e) {}
+
+        if (!data[month]) data[month] = { lock: false, lastBal: 0 };
+
+        // 解析各字段
+        data[month].lock = values[2] === '是';
+        data[month].fund_last = parseFloat(values[3]) || 0;
+        data[month].lastUnpaid = parseFloat(values[4]) || 0;
+        data[month].payLastDebt = parseFloat(values[5]) || 0;
+
+        let col = 6;
+        INCO_KEY.forEach((k, idx) => {
+          data[month]['inc_'+k] = parseFloat(values[col]) || 0;
+          col++;
+        });
+
+        customItems.forEach((name, idx) => {
+          data[month]['exp_'+idx] = parseFloat(values[col]) || 0;
+          col++;
+        });
+        customItems.forEach((name, idx) => {
+          const v = values[col];
+          data[month]['exp_paid_'+idx] = v === '是' ? true : v === '否' ? false : undefined;
+          col++;
+        });
+
+        customStaffItems.forEach((name, idx) => {
+          data[month]['staff_'+idx] = parseFloat(values[col]) || 0;
+          col++;
+        });
+        customStaffItems.forEach((name, idx) => {
+          const v = values[col];
+          data[month]['staff_paid_'+idx] = v === '是' ? true : v === '否' ? false : undefined;
+          col++;
+        });
+
+        data[month].bonus = parseFloat(values[col]) || 0;
+        col++;
+        const bv = values[col];
+        data[month].bonus_paid = bv === '是' ? true : bv === '否' ? false : undefined;
+        col++;
+
+        FUND_KEY.forEach(k => {
+          data[month]['fund_'+k] = parseFloat(values[col]) || 0;
+          col++;
+        });
+
+        localStorage.setItem(key, JSON.stringify(data));
+      }
+
+      // 保存门店列表
+      localStorage.setItem('shopAccount_stores', JSON.stringify([...stores]));
+      renderStoreSelect([...stores]);
+
+      alert('导入成功！共导入 ' + stores.size + ' 个门店的数据');
+      load();
+      render();
+    } catch(e) {
+      alert('导入失败：CSV格式错误！' + e.message);
+    }
+  }
+  closeModal();
+}
+
+// ========== 门店管理 ==========
+function renderStoreSelect(stores) {
+  const sel = KV('storeSel');
+  sel.innerHTML = '';
+  stores.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s;
+    o.textContent = s;
+    if (s === curStore) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function addStore() {
+  KV('newStoreName').value = '';
+  KV('storeModal').classList.add('show');
+}
+
+function closeStoreModal() {
+  KV('storeModal').classList.remove('show');
+}
+
+function confirmStore() {
+  const name = KV('newStoreName').value.trim();
+  if (name) {
+    const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
+    if (!stores.includes(name)) {
+      stores.push(name);
+      localStorage.setItem('shopAccount_stores', JSON.stringify(stores));
+      renderStoreSelect(stores);
+      curStore = name;
+      KV('storeSel').value = name;
+      load();
+      render();
+    }
+    closeStoreModal();
+  }
+}
+
+// ========== 自定义支出项 ==========
+function openCustomItems() {
+  renderCustomItemsList();
+  KV('customModal').classList.add('show');
+}
+
+function renderCustomItemsList() {
+  const list = KV('customItemsList');
+  list.innerHTML = customItems.map((name, idx) => `
+    <div class="custom-item">
+      <span class="custom-item-name">${name}</span>
+      <button class="del-btn" onclick="deleteCustomItem(${idx})">删除</button>
+    </div>
+  `).join('');
+}
+
+function deleteCustomItem(idx) {
+  if (confirm('确认删除「' + customItems[idx] + '」？')) {
+    customItems.splice(idx, 1);
+    renderCustomItemsList();
+  }
+}
+
+function addCustomItem() {
+  const name = KV('newItemName').value.trim();
+  if (name && !customItems.includes(name)) {
+    customItems.push(name);
+    KV('newItemName').value = '';
+    renderCustomItemsList();
+  } else if (customItems.includes(name)) {
+    alert('该项目已存在！');
+  }
+}
+
+function saveCustomItems() {
+  localStorage.setItem('shopAccount_customItems', JSON.stringify(customItems));
+  KV('customModal').classList.remove('show');
+  render();
+}
+
+// ========== 自定义人工项 ==========
+function openCustomStaffItems() {
+  renderCustomStaffItemsList();
+  KV('staffModal').classList.add('show');
+}
+
+function renderCustomStaffItemsList() {
+  const list = KV('customStaffItemsList');
+  list.innerHTML = customStaffItems.map((name, idx) => `
+    <div class="custom-item">
+      <span class="custom-item-name">${name}</span>
+      <button class="del-btn" onclick="deleteCustomStaffItem(${idx})">删除</button>
+    </div>
+  `).join('');
+}
+
+function deleteCustomStaffItem(idx) {
+  if (confirm('确认删除「' + customStaffItems[idx] + '」？')) {
+    customStaffItems.splice(idx, 1);
+    renderCustomStaffItemsList();
+  }
+}
+
+function addCustomStaffItem() {
+  const name = KV('newStaffItemName').value.trim();
+  if (name && !customStaffItems.includes(name)) {
+    customStaffItems.push(name);
+    KV('newStaffItemName').value = '';
+    renderCustomStaffItemsList();
+  } else if (customStaffItems.includes(name)) {
+    alert('该项目已存在！');
+  }
+}
+
+function saveCustomStaffItems() {
+  localStorage.setItem('shopAccount_customStaffItems', JSON.stringify(customStaffItems));
+  KV('staffModal').classList.remove('show');
+  render();
+}
+
+// ========== 动态添加项 ==========
+function addExpenseItem() {
+  const name = prompt('请输入新支出项名称：');
+  if (name && !customItems.includes(name)) {
+    customItems.push(name);
+    localStorage.setItem('shopAccount_customItems', JSON.stringify(customItems));
+    render();
+  } else if (customItems.includes(name)) {
+    alert('该项目已存在！');
+  }
+}
+
+function addSalaryItem() {
+  const name = prompt('请输入新人工项名称（如：店长、厨师、兼职等）：');
+  if (name && !customStaffItems.includes(name)) {
+    customStaffItems.push(name);
+    localStorage.setItem('shopAccount_customStaffItems', JSON.stringify(customStaffItems));
+    render();
+  } else if (customStaffItems.includes(name)) {
+    alert('该项目已存在！');
+  }
+}
+
+// 全局错误处理
+window.onerror = function(msg, url, line, col, error) {
+  if (msg.includes('localStorage') || msg.includes('Storage')) {
+    alert('⚠️ 存储错误：请确保未使用隐私模式，或尝试刷新页面');
+    return true;
+  }
+};
+
+init();
+</script>
+</body>
+</html>
