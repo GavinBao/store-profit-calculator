@@ -659,13 +659,13 @@ function calcAll() {
   const bookBal = lastBal - lastUnpaid + remainingLastUnpaid + totalInc - paidAll;
 
   // 盘盈/盘亏 = 资金总余额 - 账面应余额
-  const diff = bookBal - fundTotal;
+  const diff = fundTotal - bookBal;
 
   // 可支配结余 = 资金总余额 - 本月应付（不含奖金）- 剩余未付上月应付款
-  const currBal = fundTotal - unpaidAll - lastUnpaid;
+  const currBal = fundTotal - unpaidAll - lastUnpaid + remainingLastUnpaid;
 
   // 月底结余 = 资金总余额 - 本月应付（不含奖金）- 奖金 - 剩余未结清上月应付款
-  const endBal = fundTotal - unpaidAll - bAmt - lastUnpaid;
+  const endBal = fundTotal - unpaidAll - bUnpaid - lastUnpaid + remainingLastUnpaid;
 
   // Render KPI
   KV('kpiArea').innerHTML = `
@@ -700,9 +700,9 @@ function calcAll() {
     <div class="fs-row"><span>资金总余额（11个账户）</span><span class="v b">¥${fundTotal.toFixed(2)}</span></div>
     <div class="fs-row"><span>上月净结余 = 上月结余 - 上月应付未付</span><span class="v g">¥${lastNetBal.toFixed(2)}</span></div>
     <div class="fs-row"><span>账面应余额 = 上月结余 - 上月应付 + 剩余未付上月 + 总收入 - 已付</span><span class="v g">¥${bookBal.toFixed(2)}</span></div>
-    <div class="fs-row"><span>盘盈/盘亏 = 账面应余额 - 资金总余额</span><span class="v ${diff>=0?'r':'g'}">¥${diff.toFixed(2)} ${diff>0?'(盘亏)':diff<0?'(盘盈)':'(相符)'}</span></div>
-    <div class="fs-row"><span>可支配结余 = 资金 - 应付（不含奖金）- 上月应付未付</span><span class="v b">¥${currBal.toFixed(2)}</span></div>
-    <div class="fs-row"><span>月底结余 = 资金 - 应付（不含奖金）- 奖金 - 上月应付未付</span><span class="v o">¥${endBal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>盘盈/盘亏 = 资金总余额 - 账面应余额</span><span class="v ${diff>=0?'r':'g'}">¥${diff.toFixed(2)} ${diff>0?'(盘亏)':diff<0?'(盘盈)':'(相符)'}</span></div>
+    <div class="fs-row"><span>可支配结余 = 资金 - 应付（不含奖金）- 上月应付未付 + 剩余未付上月</span><span class="v b">¥${currBal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>月底结余 = 资金 - 应付（不含奖金）- 奖金(未付) - 上月应付未付 + 剩余未付上月</span><span class="v o">¥${endBal.toFixed(2)}</span></div>
   `;
 }
 
