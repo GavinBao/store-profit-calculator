@@ -174,10 +174,10 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
     </div>
     <div class="fund-summary" id="fundSummary"></div>
     <div class="act-row">
-      <button class="act-btn pp" onclick="addStore()">+ 新门店</button>
+      <button class="act-btn pp" onclick="openStoreList()">🏪 门店</button>
       <button class="act-btn pr" onclick="exportAllData()">📤 导出</button>
       <button class="act-btn yl" onclick="importData()">📥 导入</button>
-      <button class="act-btn dg" onclick="deleteMonth()">🗑 删除</button>
+      <button class="act-btn pp" onclick="openSettings()">⚙️ 设置</button>
     </div>
   </div>
 </div>
@@ -229,13 +229,52 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
 <!-- 添加门店 Modal -->
 <div class="modal" id="storeModal">
   <div class="modal-content">
-    <h3>门店管理</h3>
-    <div id="storeList" style="margin-bottom:12px;max-height:200px;overflow-y:auto;"></div>
-    <hr style="border:none;border-top:1px solid #eee;margin-bottom:12px;">
-    <input type="text" id="newStoreName" placeholder="新门店名称">
+    <h3>添加新门店</h3>
+    <input type="text" id="newStoreName" placeholder="门店名称">
     <div class="btn-row">
       <button style="background:#ccc;" onclick="closeStoreModal()">取消</button>
-      <button style="background:#2196F3;color:#fff;" onclick="confirmStore()">确认添加</button>
+      <button style="background:#2196F3;color:#fff;" onclick="confirmStore()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 密码验证/设置 Modal -->
+<div class="modal" id="pwdModal">
+  <div class="modal-content">
+    <h3 id="pwdModalTitle">🔐 输入访问密码</h3>
+    <input type="password" id="pwdInput" placeholder="请输入密码" onkeydown="if(event.key==='Enter')confirmPwd()">
+    <div class="btn-row">
+      <button style="background:#2196F3;color:#fff;" onclick="confirmPwd()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 门店列表 Modal -->
+<div class="modal" id="storeListModal">
+  <div class="modal-content">
+    <h3>🏪 门店管理</h3>
+    <div class="custom-items-list" id="storeListContent"></div>
+    <div style="display:flex;gap:5px;">
+      <input type="text" id="newStoreName2" placeholder="新门店名称">
+      <button class="act-btn pp" onclick="addStoreFromList()">添加</button>
+    </div>
+    <div class="btn-row">
+      <button style="background:#4CAF50;color:#fff;" onclick="closeStoreListModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置 Modal -->
+<div class="modal" id="settingsModal">
+  <div class="modal-content">
+    <h3>⚙️ 系统设置</h3>
+    <div style="text-align:left;margin-bottom:15px;">
+      <button class="act-btn pp" style="width:100%;margin-bottom:8px;" onclick="changePassword()">🔑 修改访问密码</button>
+      <button class="act-btn dg" style="width:100%;margin-bottom:8px;" onclick="deleteCurrentMonth()">🗑️ 删除当前月份数据</button>
+      <button class="act-btn yl" style="width:100%;" onclick="clearAllData()">💣 清空所有数据（不可恢复）</button>
+    </div>
+    <div class="btn-row">
+      <button style="background:#4CAF50;color:#fff;" onclick="closeSettingsModal()">关闭</button>
     </div>
   </div>
 </div>
@@ -258,6 +297,10 @@ let customItems = [];
 let customStaffItems = [];
 let modalMode = '';
 let staffCount = 9;
+let isUnlocked = false;
+
+// 密码相关
+const PWD_KEY = 'shopAccount_password';
 
 // 工具函数
 const KV = k => document.getElementById(k);
@@ -292,6 +335,25 @@ function init() {
     return;
   }
 
+  // 密码验证
+  const savedPwd = localStorage.getItem(PWD_KEY);
+  if (!savedPwd) {
+    // 首次使用，设置密码
+    KV('pwdModalTitle').textContent = '🔐 首次使用，请设置访问密码';
+    KV('pwdModal').classList.add('show');
+    KV('pwdInput').focus();
+    return;
+  } else {
+    // 需要验证密码
+    KV('pwdModalTitle').textContent = '🔐 请输入访问密码';
+    KV('pwdModal').classList.add('show');
+    KV('pwdInput').focus();
+    return;
+  }
+}
+
+// 密码验证通过后调用此函数继续初始化
+function initAppCore() {
   // 加载门店列表
   const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
   renderStoreSelect(stores);
@@ -316,6 +378,166 @@ function init() {
 
   load();
   render();
+}
+
+// ========== 密码相关 ==========
+function confirmPwd() {
+  const input = KV('pwdInput').value.trim();
+  const savedPwd = localStorage.getItem(PWD_KEY);
+
+  if (!savedPwd) {
+    // 首次设置密码
+    if (input.length < 4) {
+      alert('密码长度至少4位');
+      return;
+    }
+    localStorage.setItem(PWD_KEY, input);
+    KV('pwdModal').classList.remove('show');
+    isUnlocked = true;
+    initAppCore();
+  } else {
+    // 验证密码
+    if (input === savedPwd) {
+      KV('pwdModal').classList.remove('show');
+      isUnlocked = true;
+      initAppCore();
+    } else {
+      alert('密码错误，请重试');
+      KV('pwdInput').value = '';
+      KV('pwdInput').focus();
+    }
+  }
+}
+
+function changePassword() {
+  const oldPwd = localStorage.getItem(PWD_KEY);
+  const inputOld = prompt('请输入原密码：');
+  if (inputOld !== oldPwd) {
+    alert('原密码错误');
+    return;
+  }
+  const inputNew = prompt('请输入新密码（至少4位）：');
+  if (!inputNew || inputNew.length < 4) {
+    alert('新密码长度至少4位');
+    return;
+  }
+  const inputConfirm = prompt('请再次输入新密码：');
+  if (inputNew !== inputConfirm) {
+    alert('两次输入的密码不一致');
+    return;
+  }
+  localStorage.setItem(PWD_KEY, inputNew);
+  alert('密码修改成功');
+  closeSettingsModal();
+}
+
+// ========== 门店列表管理 ==========
+function openStoreList() {
+  renderStoreList();
+  KV('storeListModal').classList.add('show');
+}
+
+function closeStoreListModal() {
+  KV('storeListModal').classList.remove('show');
+}
+
+function renderStoreList() {
+  const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
+  const list = KV('storeListContent');
+  list.innerHTML = stores.map(s =>
+    '<div class="custom-item" style="padding:8px 0;">' +
+      '<span class="custom-item-name" style="font-weight:600;">' + s + '</span>' +
+      (s === '默认门店'
+        ? '<span style="color:#999;font-size:11px;">默认门店不可删除</span>'
+        : '<button class="del-btn" onclick="deleteStore(\'' + s + '\')">🗑 删除</button>'
+      ) +
+    '</div>'
+  ).join('');
+}
+
+function deleteStore(storeName) {
+  if (!confirm('确定要删除门店「' + storeName + '」吗？\n该门店所有数据将被删除且不可恢复！')) {
+    return;
+  }
+  const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
+  const newStores = stores.filter(s => s !== storeName);
+  localStorage.setItem('shopAccount_stores', JSON.stringify(newStores));
+
+  // 删除该门店的数据
+  localStorage.removeItem(STORAGE_KEY + '_' + storeName);
+
+  // 如果当前选中的门店被删除，切换到默认门店
+  if (curStore === storeName) {
+    curStore = '默认门店';
+    renderStoreSelect(newStores);
+    load();
+    render();
+  }
+
+  renderStoreList();
+  renderStoreSelect(newStores);
+  alert('门店已删除');
+}
+
+function addStoreFromList() {
+  const name = KV('newStoreName2').value.trim();
+  if (name) {
+    const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
+    if (!stores.includes(name)) {
+      stores.push(name);
+      localStorage.setItem('shopAccount_stores', JSON.stringify(stores));
+      KV('newStoreName2').value = '';
+      renderStoreList();
+      renderStoreSelect(stores);
+    } else {
+      alert('该门店已存在');
+    }
+  }
+}
+
+// ========== 设置相关 ==========
+function openSettings() {
+  KV('settingsModal').classList.add('show');
+}
+
+function closeSettingsModal() {
+  KV('settingsModal').classList.remove('show');
+}
+
+function deleteCurrentMonth() {
+  if (!confirm('确定要删除 ' + curStore + ' ' + curMonth + ' 的数据吗？\n此操作不可恢复！')) {
+    return;
+  }
+  delete data[curMonth];
+  save();
+  const keys = Object.keys(data).sort();
+  if (keys.length > 0) {
+    curMonth = keys[keys.length - 1];
+  } else {
+    const n = new Date();
+    curMonth = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0');
+  }
+  render();
+  closeSettingsModal();
+  alert('当前月份数据已删除');
+}
+
+function clearAllData() {
+  if (!confirm('⚠️ 危险操作！确定要清空所有数据吗？\n\n包括：\n- 所有门店数据\n- 所有月份数据\n- 自定义项设置\n- 访问密码\n\n此操作不可恢复！')) {
+    return;
+  }
+  if (!confirm('请再次确认：清空所有数据？')) {
+    return;
+  }
+  // 清除所有相关localStorage
+  const keys = ['shopAccount_stores', 'shopAccount_customItems', 'shopAccount_customStaffItems', PWD_KEY];
+  const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
+  stores.forEach(s => keys.push(STORAGE_KEY + '_' + s));
+
+  keys.forEach(k => localStorage.removeItem(k));
+
+  alert('所有数据已清空，请刷新页面重新设置密码');
+  location.reload();
 }
 
 // ========== 数据加载/保存 ==========
@@ -633,11 +855,11 @@ function calcAll() {
   const bPaid = d['bonus_paid'] === true ? bAmt : 0;
   const bUnpaid = d['bonus_paid'] === false ? bAmt : 0;
 
-  // Total expense
+  // Total expense（不含奖金，奖金只在月底结余中单独计算）
   let totalExp = 0;
   customItems.forEach((name, i) => totalExp += vv(d['exp_'+i]));
   customStaffItems.forEach((name, i) => totalExp += vv(d['staff_'+i]));
-  totalExp += bAmt;
+  // 奖金不计入本月总支出，只在月底结余中计算
 
   // Profit
   const profit = totalInc - totalExp;
@@ -654,18 +876,18 @@ function calcAll() {
     fundTotal += vv(d['fund_'+k]);
   });
 
-  // 【核心修正公式】
+  // 【核心修正公式 v2】
   // 账面应余额 = 上月结余 - 上月应付 + 剩余未付上月 + 总收入 - 已付
   const bookBal = lastBal - lastUnpaid + remainingLastUnpaid + totalInc - paidAll;
 
   // 盘盈/盘亏 = 资金总余额 - 账面应余额
   const diff = fundTotal - bookBal;
 
-  // 可支配结余 = 资金总余额 - 本月应付（不含奖金）- 剩余未付上月应付款
-  const currBal = fundTotal - unpaidAll - lastUnpaid;
+  // 可支配结余 = 资金总余额 - 本月应付（不含奖金）- 剩余未付上月
+  const currBal = fundTotal - unpaidAll - remainingLastUnpaid;
 
-  // 月底结余 = 资金总余额 - 本月应付（不含奖金）- 奖金 - 剩余未结清上月应付款
-  const endBal = fundTotal - unpaidAll - bUnpaid - lastUnpaid + remainingLastUnpaid;
+  // 月底结余 = 资金 - 应付(不含奖金) - 未付奖金
+  const endBal = fundTotal - unpaidAll - bUnpaid;
 
   // Render KPI
   KV('kpiArea').innerHTML = `
@@ -673,7 +895,7 @@ function calcAll() {
       <div class="kc ppl"><div class="lb">${curMonth}</div><div class="amt" style="font-size:12px;color:#555">${'上月结余 ¥'+lastBal.toFixed(2)}</div></div>
       <div class="kc ppl"><div class="lb">上月净结余</div><div class="amt">¥${lastNetBal.toFixed(2)}</div></div>
       <div class="kc blu"><div class="lb">本月总收入</div><div class="amt">¥${totalInc.toFixed(2)}</div></div>
-      <div class="kc red"><div class="lb">本月总支出</div><div class="amt">¥${totalExp.toFixed(2)}</div></div>
+      <div class="kc red"><div class="lb">总支出(不含奖金)</div><div class="amt">¥${totalExp.toFixed(2)}</div></div>
     </div>
     <div class="kpi-r">
       <div class="kc ppl"><div class="lb">上月应付未付</div><div class="amt">¥${lastUnpaid.toFixed(2)}</div></div>
@@ -689,9 +911,14 @@ function calcAll() {
     </div>
     <div class="kpi-r">
       <div class="kc org"><div class="lb">剩余未付上月</div><div class="amt">¥${remainingLastUnpaid.toFixed(2)}</div></div>
-      <div class="kc ${diff>=0?'red':'grn'}"><div class="lb">盘盈/盘亏</div><div class="amt">¥${diff.toFixed(2)}</div></div>
+      <div class="kc ${diff>=0?'grn':'red'}"><div class="lb">盘盈/盘亏</div><div class="amt">¥${diff.toFixed(2)}</div></div>
       <div class="kc blu"><div class="lb">可支配结余</div><div class="amt">¥${currBal.toFixed(2)}</div></div>
       <div class="kc org"><div class="lb">月底结余</div><div class="amt">¥${endBal.toFixed(2)}</div></div>
+    </div>
+    <div class="kpi-r">
+      <div class="kc ylw"><div class="lb">💎 奖金总额</div><div class="amt">¥${bAmt.toFixed(2)}</div></div>
+      <div class="kc grn"><div class="lb">奖金已付</div><div class="amt">¥${bPaid.toFixed(2)}</div></div>
+      <div class="kc ${bUnpaid>0?'red':'grn'}"><div class="lb">奖金未付</div><div class="amt">¥${bUnpaid.toFixed(2)}</div></div>
     </div>
   `;
 
@@ -700,9 +927,9 @@ function calcAll() {
     <div class="fs-row"><span>资金总余额（11个账户）</span><span class="v b">¥${fundTotal.toFixed(2)}</span></div>
     <div class="fs-row"><span>上月净结余 = 上月结余 - 上月应付未付</span><span class="v g">¥${lastNetBal.toFixed(2)}</span></div>
     <div class="fs-row"><span>账面应余额 = 上月结余 - 上月应付 + 剩余未付上月 + 总收入 - 已付</span><span class="v g">¥${bookBal.toFixed(2)}</span></div>
-    <div class="fs-row"><span>盘盈/盘亏 = 资金总余额 - 账面应余额</span><span class="v ${diff>=0?'r':'g'}">¥${diff.toFixed(2)} ${diff>0?'(盘亏)':diff<0?'(盘盈)':'(相符)'}</span></div>
-    <div class="fs-row"><span>可支配结余 = 资金 - 应付（不含奖金）- 上月应付未付</span><span class="v b">¥${currBal.toFixed(2)}</span></div>
-    <div class="fs-row"><span>月底结余 = 资金 - 应付（不含奖金）- 奖金(未付) - 上月应付未付 + 剩余未付上月</span><span class="v o">¥${endBal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>盘盈/盘亏 = 资金总余额 - 账面应余额</span><span class="v ${diff>=0?'g':'r'}">¥${diff.toFixed(2)} ${diff>0?'(盘盈)':diff<0?'(盘亏)':'(相符)'}</span></div>
+    <div class="fs-row"><span>可支配结余 = 资金 - 应付(不含奖金) - 剩余未付上月</span><span class="v b">¥${currBal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>月底结余 = 资金 - 应付 - 未付奖金</span><span class="v o">¥${endBal.toFixed(2)}</span></div>
   `;
 }
 
@@ -882,32 +1109,7 @@ function renderStoreSelect(stores) {
 
 function addStore() {
   KV('newStoreName').value = '';
-  const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["\u9ED8\u8BA4\u95E8\u5E97"]');
-  const list = KV('storeList');
-  list.innerHTML = stores.map((s, i) => {
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;border-bottom:1px solid #eee;">' +
-      '<span style="font-size:14px;">' + s + '</span>' +
-      (i > 0 ? '<button onclick="deleteStoreHandler(\'' + s + '\')" style="background:#f44336;color:#fff;border:none;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer;">删除</button>' : '') +
-      '</div>';
-  }).join('');
   KV('storeModal').classList.add('show');
-}
-
-function deleteStoreHandler(storeName) {
-  if (!confirm('确定删除门店「' + storeName + '」？该门店所有数据将被删除！')) return;
-  var stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["\u9ED8\u8BA4\u95E8\u5E97"]');
-  var idx = stores.indexOf(storeName);
-  if (idx > -1) {
-    stores.splice(idx, 1);
-    localStorage.setItem('shopAccount_stores', JSON.stringify(stores));
-    localStorage.removeItem(STORAGE_KEY + '_' + storeName);
-    if (curStore === storeName) curStore = stores[0];
-    renderStoreSelect(stores);
-    KV('storeSel').value = curStore;
-    load(); render();
-    addStore();
-    alert('门店已删除！');
-  }
 }
 
 function closeStoreModal() {
