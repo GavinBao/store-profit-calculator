@@ -244,9 +244,25 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
   <div class="modal-content">
     <h3 id="pwdModalTitle">🔐 输入访问密码</h3>
     <input type="password" id="pwdInput" placeholder="请输入密码" onkeydown="if(event.key==='Enter')confirmPwd()">
-    <div class="btn-row">
-      <button style="background:#2196F3;color:#fff;" onclick="confirmPwd()">确认</button>
+    <!-- 首次设置时显示恢复码 -->
+    <div id="recoveryArea" style="display:none;background:#fff3e0;padding:10px;border-radius:6px;margin:8px 0;text-align:center;">
+      <p style="font-size:11px;color:#e65100;margin:0 0 5px;">⚠️ 请务必保存此恢复码，遗忘密码时可用：</p>
+      <code id="recoveryCode" style="font-size:18px;font-weight:700;letter-spacing:2px;color:#d84315;background:#fff;padding:4px 12px;border-radius:4px;border:1px dashed #e65100;">--------</code>
+      <p style="font-size:10px;color:#999;margin:5px 0 0;">截图或复制保存，仅显示一次</p>
     </div>
+    <!-- 忘记密码时显示恢复码输入 -->
+    <div id="forgotArea" style="display:none;">
+      <p style="font-size:11px;color:#888;margin:5px 0;">输入恢复码以重置密码：</p>
+      <input type="text" id="recoveryInput" placeholder="输入8位恢复码" style="margin-bottom:6px;">
+      <button style="background:#e6a23c;color:#fff;width:100%;padding:8px;border:none;border-radius:4px;cursor:pointer;margin-bottom:8px;" onclick="resetWithRecovery()">重置密码</button>
+      <p style="font-size:10px;color:#999;text-align:center;">或 <a href="javascript:void(0)" onclick="nukeAll()" style="color:#f44336;">清除所有数据重新开始</a></p>
+    </div>
+    <div class="btn-row">
+      <button style="background:#2196F3;color:#fff;" id="pwdConfirmBtn" onclick="confirmPwd()">确认</button>
+    </div>
+    <p id="forgotLink" style="font-size:11px;text-align:center;margin-top:8px;display:none;">
+      <a href="javascript:void(0)" onclick="showForgotPwd()" style="color:#999;">忘记密码?</a>
+    </p>
   </div>
 </div>
 
@@ -320,6 +336,7 @@ let isUnlocked = false;
 
 // 密码相关
 const PWD_KEY = 'shopAccount_password';
+const RECOVERY_KEY = 'shopAccount_recoveryCode';
 
 // Gist 云同步
 const GIST_TOKEN_KEY = 'shopAccount_gistToken';
@@ -365,12 +382,20 @@ function init() {
   if (!savedPwd) {
     // 首次使用，设置密码
     KV('pwdModalTitle').textContent = '🔐 首次使用，请设置访问密码';
+    KV('recoveryArea').style.display = 'none';
+    KV('forgotArea').style.display = 'none';
+    KV('forgotLink').style.display = 'none';
+    KV('pwdConfirmBtn').style.display = '';
     KV('pwdModal').classList.add('show');
     KV('pwdInput').focus();
     return;
   } else {
     // 需要验证密码
     KV('pwdModalTitle').textContent = '🔐 请输入访问密码';
+    KV('recoveryArea').style.display = 'none';
+    KV('forgotArea').style.display = 'none';
+    KV('forgotLink').style.display = '';
+    KV('pwdConfirmBtn').style.display = '';
     KV('pwdModal').classList.add('show');
     KV('pwdInput').focus();
     return;
@@ -407,6 +432,13 @@ function initAppCore() {
 }
 
 // ========== 密码相关 ==========
+function generateRecoveryCode() {
+  const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
 function confirmPwd() {
   const input = KV('pwdInput').value.trim();
   const savedPwd = localStorage.getItem(PWD_KEY);
@@ -417,10 +449,27 @@ function confirmPwd() {
       alert('密码长度至少4位');
       return;
     }
+    const recoveryCode = generateRecoveryCode();
     localStorage.setItem(PWD_KEY, input);
-    KV('pwdModal').classList.remove('show');
-    isUnlocked = true;
-    initAppCore();
+    localStorage.setItem(RECOVERY_KEY, recoveryCode);
+    // 显示恢复码
+    KV('recoveryCode').textContent = recoveryCode;
+    KV('recoveryArea').style.display = '';
+    KV('pwdConfirmBtn').style.display = 'none';
+    KV('pwdModalTitle').textContent = '✅ 密码已设置，请保存恢复码';
+    alert('密码设置成功！\n\n请务必保存下方恢复码：\n' + recoveryCode + '\n\n遗忘密码时可用此码重置。');
+    // 5秒后自动进入
+    setTimeout(() => {
+      KV('pwdModal').classList.remove('show');
+      isUnlocked = true;
+      initAppCore();
+    }, 5000);
+    // 点击关闭按钮也可以立即进入
+    KV('recoveryArea').onclick = function() {
+      KV('pwdModal').classList.remove('show');
+      isUnlocked = true;
+      initAppCore();
+    };
   } else {
     // 验证密码
     if (input === savedPwd) {
@@ -433,6 +482,45 @@ function confirmPwd() {
       KV('pwdInput').focus();
     }
   }
+}
+
+function showForgotPwd() {
+  KV('forgotLink').style.display = 'none';
+  KV('forgotArea').style.display = '';
+  KV('pwdModalTitle').textContent = '🔑 恢复密码';
+  KV('pwdInput').style.display = 'none';
+  KV('pwdConfirmBtn').style.display = 'none';
+}
+
+function resetWithRecovery() {
+  const input = KV('recoveryInput').value.trim().toUpperCase();
+  const savedRecovery = localStorage.getItem(RECOVERY_KEY);
+  if (!input) { alert('请输入恢复码'); return; }
+  if (input === savedRecovery) {
+    const newPwd = prompt('恢复码正确！请设置新密码（至少4位）：');
+    if (!newPwd || newPwd.length < 4) { alert('密码长度至少4位'); return; }
+    const confirmPwd2 = prompt('请再次输入新密码：');
+    if (newPwd !== confirmPwd2) { alert('两次密码不一致'); return; }
+    localStorage.setItem(PWD_KEY, newPwd);
+    alert('密码已重置，请用新密码登录');
+    location.reload();
+  } else {
+    alert('恢复码错误');
+    KV('recoveryInput').value = '';
+  }
+}
+
+function nukeAll() {
+  if (!confirm('⚠️ 将清空所有数据（包括密码、财务数据、配置）且不可恢复！\n\n确定要继续吗？')) return;
+  if (!confirm('再次确认：清空所有数据？')) return;
+  const allKeys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('shop')) allKeys.push(k);
+  }
+  allKeys.forEach(k => localStorage.removeItem(k));
+  alert('已清空，请刷新页面重新开始');
+  location.reload();
 }
 
 function changePassword() {
@@ -556,7 +644,7 @@ function clearAllData() {
     return;
   }
   // 清除所有相关localStorage
-  const keys = ['shopAccount_stores', 'shopAccount_customItems', 'shopAccount_customStaffItems', PWD_KEY];
+  const keys = ['shopAccount_stores', 'shopAccount_customItems', 'shopAccount_customStaffItems', PWD_KEY, RECOVERY_KEY, GIST_TOKEN_KEY, GIST_ID_KEY];
   const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
   stores.forEach(s => keys.push(STORAGE_KEY + '_' + s));
 
