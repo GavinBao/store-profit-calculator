@@ -1100,8 +1100,9 @@ function calcAll() {
   // 盘盈/盘亏 = 资金总余额 - 账面应余额
   const diff = fundTotal - bookBal;
 
-  // 可支配结余 = 资金总余额 - 本月应付（不含奖金）- 剩余未付上月
-  const currBal = fundTotal - unpaidAll - remainingLastUnpaid;
+  // 可支配结余 = 资金总余额 − 应付(含奖金) − 上月应付未付总额
+  // 应付(含奖金) = 本月应付(不含奖金) + 奖金总额
+  const currBal = fundTotal - unpaidAll - bAmt - lastUnpaid;
 
   // 月底结余 = 资金 - 应付(不含奖金) - 未付奖金
   const endBal = fundTotal - unpaidAll - bUnpaid;
@@ -1145,7 +1146,7 @@ function calcAll() {
     <div class="fs-row"><span>上月净结余 = 上月结余 - 上月应付未付</span><span class="v g">¥${lastNetBal.toFixed(2)}</span></div>
     <div class="fs-row"><span>账面应余额 = 上月结余 - 上月应付 + 剩余未付上月 + 总收入 - 已付</span><span class="v g">¥${bookBal.toFixed(2)}</span></div>
     <div class="fs-row"><span>盘盈/盘亏 = 资金总余额 - 账面应余额</span><span class="v ${diff>=0?'g':'r'}">¥${diff.toFixed(2)} ${diff>0?'(盘盈)':diff<0?'(盘亏)':'(相符)'}</span></div>
-    <div class="fs-row"><span>可支配结余 = 资金 - 应付(不含奖金) - 剩余未付上月</span><span class="v b">¥${currBal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>可支配结余 = 资金 - 应付(含奖金${bAmt.toFixed(2)}) - 上月应付未付(${lastUnpaid.toFixed(2)})</span><span class="v b">¥${currBal.toFixed(2)}</span></div>
     <div class="fs-row"><span>月底结余 = 资金 - 应付 - 未付奖金</span><span class="v o">¥${endBal.toFixed(2)}</span></div>
   `;
 }
