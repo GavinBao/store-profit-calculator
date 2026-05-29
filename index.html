@@ -101,6 +101,7 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
     <select id="storeSel" onchange="switchStore(this.value)">
       <option value="默认门店">默认门店</option>
     </select>
+    <button class="act-btn pp" style="font-size:10px;padding:2px 6px" onclick="addStore()">🏪 +</button>
   </div>
   <div class="s">
     <span id="syncDot" style="font-size:10px;color:#bbb;margin-right:4px;" title="云同步状态">☁️</span>
@@ -113,6 +114,8 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
   <span class="ar" onclick="chgMonth(-1)">◀</span>
   <span class="mt" id="monthDisplay"></span>
   <span class="ar" onclick="chgMonth(1)">▶</span>
+  <button class="act-btn yl" style="font-size:10px;padding:3px 6px" onclick="addMonth()">➕ 月份</button>
+  <button class="act-btn dg" style="font-size:10px;padding:3px 6px" onclick="deleteMonth()">🗑 删除</button>
 </div>
 
 <!-- KPI 3列 -->
@@ -140,7 +143,7 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
 
 <!-- Salary -->
 <div class="sec">
-  <div class="sh"><div class="l"><span class="ico">👥</span> 人工工资</div><div class="r">3×3</div></div>
+  <div class="sh"><div class="l"><span class="ico">👥</span> 人工工资</div><div class="r" id="staffCountLabel">3×3</div></div>
   <div class="sb">
     <div class="gr gr3" id="salaryGrid"></div>
     <div class="stat-row"><span>工资支出合计</span><span class="v r" id="salaryTotal">0.00</span></div>
@@ -331,7 +334,6 @@ let data = {}, curMonth = '', curStore = '默认门店';
 let customItems = [];
 let customStaffItems = [];
 let modalMode = '';
-let staffCount = 9;
 let isUnlocked = false;
 
 // 密码相关
@@ -868,7 +870,7 @@ function md(m) {
         return s + vv(data[prev]['fund_'+k]);
       }, 0);
     }
-    data[m] = { lock: false, lastBal: lb };
+    data[m] = { lock: false, lastBal: lb, fund_last: lb };
     save();
   }
   return data[m];
@@ -925,7 +927,7 @@ function render() {
   // Salary (使用自定义项)
   let sh = '';
   const staffCount = Math.ceil(customStaffItems.length / 3);
-  document.querySelector('.sec:nth-of-type(4) .sh .r').textContent = `${staffCount}×3`;
+  KV('staffCountLabel').textContent = `${staffCount}×3`;
   customStaffItems.forEach((name, i) => {
     const key = 'staff_' + i;
     const paid = d['staff_paid_'+i];
@@ -1240,6 +1242,38 @@ function calcAll() {
 }
 
 // ========== 导出/导入 ==========
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cur += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        result.push(cur);
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
 function exportAllData() {
   modalMode = 'export';
   KV('modalTitle').textContent = '📤 导出CSV（手机Excel/WPS打开）';
@@ -1318,13 +1352,13 @@ function confirmModal() {
         return;
       }
 
-      const header = lines[0].split(',');
+      const header = parseCSVLine(lines[0]);
       const stores = new Set();
 
       // 解析CSV数据
       for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
-        const values = lines[i].split(',');
+        const values = parseCSVLine(lines[i]);
         if (values.length < header.length) continue;
 
         const store = values[0];
