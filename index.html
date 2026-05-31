@@ -335,6 +335,7 @@ let customItems = [];
 let customStaffItems = [];
 let modalMode = '';
 let isUnlocked = false;
+let initialized = false;
 
 // 密码相关
 const PWD_KEY = 'shopAccount_password';
@@ -430,7 +431,18 @@ function initAppCore() {
 
   load();
   render();
+  initialized = true;
+  save();
   updateSyncDot();
+
+  // 存储健康检查：对比上次保存时间
+  const lastSave = localStorage.getItem('shopAccount_lastSave');
+  const dataKey = STORAGE_KEY + '_' + curStore;
+  const hasData = localStorage.getItem(dataKey) && localStorage.getItem(dataKey) !== '{}';
+  if (!hasData && lastSave) {
+    // 上次有保存记录但本次无数据，可能是手机浏览器更换了存储作用域
+    console.warn('[存储警告] 上次保存时间: ' + new Date(parseInt(lastSave)).toLocaleString() + '，但当前无数据。可能浏览器更换了文件路径。');
+  }
 }
 
 // ========== 密码相关 ==========
@@ -849,12 +861,49 @@ function autoSyncToGist() {
 // ========== 数据加载/保存 ==========
 function load() {
   const key = STORAGE_KEY + '_' + curStore;
-  try { data = JSON.parse(localStorage.getItem(key))||{}; } catch(e) { data = {}; }
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      data = JSON.parse(raw);
+      console.log('[load] 成功加载', curStore, '共', Object.keys(data).length, '个月:', Object.keys(data).join(', '));
+    } else {
+      data = {};
+      console.log('[load] 无已有数据, key:', key);
+    }
+  } catch(e) {
+    console.error('[load] 数据解析失败:', e.message);
+    data = {};
+  }
 }
 
 function save() {
   const key = STORAGE_KEY + '_' + curStore;
-  localStorage.setItem(key, JSON.stringify(data));
+  // 防止空数据覆盖已有数据（初始化阶段保护）
+  if (Object.keys(data).length === 0) {
+    const existing = localStorage.getItem(key);
+    if (existing && existing !== '{}') {
+      console.warn('[save] 阻止空数据覆盖已有数据, key:', key);
+      data = JSON.parse(existing);
+      return;
+    }
+  }
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    // 写入时间戳用于诊断
+    localStorage.setItem('shopAccount_lastSave', Date.now().toString());
+    // 显示保存状态
+    const dot = KV('syncDot');
+    if (dot && dot.textContent === '☁️' && dot.style.color === 'rgb(187, 187, 187)') {
+      dot.textContent = '💾';
+      dot.style.color = '#2e7d32';
+      dot.title = '已保存 ' + new Date().toLocaleTimeString();
+      setTimeout(() => { updateSyncDot(); }, 2000);
+    }
+    console.log('[save] 已保存', curStore, curMonth, '共', Object.keys(data).length, '个月');
+  } catch(e) {
+    console.error('[save] 保存失败:', e.message);
+    alert('数据保存失败！请检查浏览器存储空间。');
+  }
   autoSyncToGist();
 }
 
@@ -871,7 +920,10 @@ function md(m) {
       }, 0);
     }
     data[m] = { lock: false, lastBal: lb, fund_last: lb };
-    save();
+    // 初始化阶段不保存，由 initAppCore 统一保存；已初始化则立即保存
+    if (initialized) {
+      save();
+    }
   }
   return data[m];
 }
@@ -1575,6 +1627,22 @@ function addSalaryItem() {
     alert('该项目已存在！');
   }
 }
+
+// ========== 移动端数据保护 ==========
+// 页面隐藏/切换时强制保存（手机上比 beforeunload 更可靠）
+window.addEventListener('pagehide', function() {
+  if (initialized && Object.keys(data).length > 0) {
+    const key = STORAGE_KEY + '_' + curStore;
+    try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+  }
+});
+
+window.addEventListener('visibilitychange', function() {
+  if (document.hidden && initialized && Object.keys(data).length > 0) {
+    const key = STORAGE_KEY + '_' + curStore;
+    try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+  }
+});
 
 // 全局错误处理
 window.onerror = function(msg, url, line, col, error) {
