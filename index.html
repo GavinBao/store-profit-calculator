@@ -29,6 +29,8 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
 .kc .lb{font-size:9px;color:#888;margin-bottom:1px;white-space:nowrap}
 .kc .amt{font-size:13px;font-weight:700}
 .kc.grn .amt{color:#2e7d32}.kc.red .amt{color:#c62828}.kc.blu .amt{color:#1565c0}.kc.org .amt{color:#e65100}.kc.ppl .amt{color:#6a1b9a}.kc.ylw .amt{color:#f57f17}
+.kpi-sec{font-size:10px;color:#999;padding:6px 2px 1px;margin-top:2px;border-top:1px dashed #e0e0e0}
+.kpi-sec:first-child{border-top:none;margin-top:0;padding-top:0}
 
 /* Section */
 .sec{background:#fff;margin:8px 0;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
@@ -88,6 +90,8 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
 /* Custom items */
 .custom-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
 .custom-item-name{flex:1}
+.custom-item-name input{width:100%;border:none;background:transparent;font-size:13px;padding:2px 4px;border-radius:3px}
+.custom-item-name input:focus{background:#fff;border:1px solid #3949ab;outline:none}
 .custom-item .del-btn{background:#f44336;color:#fff;border:none;border-radius:3px;padding:3px 8px;font-size:11px;cursor:pointer}
 .custom-items-list{max-height:200px;overflow-y:auto;margin-bottom:10px}
 </style>
@@ -1256,32 +1260,39 @@ function calcAll() {
 
   // Render KPI
   KV('kpiArea').innerHTML = `
+    <div class="kpi-sec">📊 ${curMonth} 本月经营</div>
     <div class="kpi-r">
-      <div class="kc ppl"><div class="lb">${curMonth}</div><div class="amt" style="font-size:12px;color:#555">${'上月结余 ¥'+lastBal.toFixed(2)}</div></div>
-      <div class="kc ppl"><div class="lb">上月净结余</div><div class="amt">¥${lastNetBal.toFixed(2)}</div></div>
       <div class="kc blu"><div class="lb">本月总收入</div><div class="amt">¥${totalInc.toFixed(2)}</div></div>
       <div class="kc red"><div class="lb">总支出(不含奖金)</div><div class="amt">¥${totalExp.toFixed(2)}</div></div>
-    </div>
-    <div class="kpi-r">
-      <div class="kc ppl"><div class="lb">上月应付未付</div><div class="amt">¥${lastUnpaid.toFixed(2)}</div></div>
       <div class="kc ${profit>=0?'grn':'red'}"><div class="lb">净利润</div><div class="amt">¥${profit.toFixed(2)}</div></div>
-      <div class="kc blu"><div class="lb">资金总余额</div><div class="amt">¥${fundTotal.toFixed(2)}</div></div>
-      <div class="kc grn"><div class="lb">已付总支出</div><div class="amt">¥${paidAll.toFixed(2)}</div></div>
+      <div class="kc ${profitRate>=0?'grn':'red'}"><div class="lb">净利率</div><div class="amt">${profitRate.toFixed(1)}%</div></div>
     </div>
     <div class="kpi-r">
-      <div class="kc org"><div class="lb">本月偿还上月</div><div class="amt">¥${payLastDebt.toFixed(2)}</div></div>
-      <div class="kc ${profitRate>=0?'grn':'red'}"><div class="lb">净利率</div><div class="amt">${profitRate.toFixed(1)}%</div></div>
-      <div class="kc ppl"><div class="lb">账面应余额</div><div class="amt">¥${bookBal.toFixed(2)}</div></div>
+      <div class="kc grn"><div class="lb">已付总支出</div><div class="amt">¥${paidAll.toFixed(2)}</div></div>
       <div class="kc org"><div class="lb">应付总支出</div><div class="amt">¥${unpaidAll.toFixed(2)}</div></div>
+    </div>
+
+    <div class="kpi-sec">💰 资金 & 结余</div>
+    <div class="kpi-r">
+      <div class="kc ppl"><div class="lb">上月结余</div><div class="amt">¥${lastBal.toFixed(2)}</div></div>
+      <div class="kc ppl"><div class="lb">上月净结余</div><div class="amt">¥${lastNetBal.toFixed(2)}</div></div>
+      <div class="kc ppl"><div class="lb">上月应付未付</div><div class="amt">¥${lastUnpaid.toFixed(2)}</div></div>
+      <div class="kc org"><div class="lb">本月偿还上月</div><div class="amt">¥${payLastDebt.toFixed(2)}</div></div>
     </div>
     <div class="kpi-r">
       <div class="kc org"><div class="lb">剩余未付上月</div><div class="amt">¥${remainingLastUnpaid.toFixed(2)}</div></div>
+      <div class="kc blu"><div class="lb">资金总余额</div><div class="amt">¥${fundTotal.toFixed(2)}</div></div>
+      <div class="kc ppl"><div class="lb">账面应余额</div><div class="amt">¥${bookBal.toFixed(2)}</div></div>
       <div class="kc ${diff>=0?'grn':'red'}"><div class="lb">盘盈/盘亏</div><div class="amt">¥${diff.toFixed(2)}</div></div>
+    </div>
+    <div class="kpi-r">
       <div class="kc blu"><div class="lb">可支配结余</div><div class="amt">¥${currBal.toFixed(2)}</div></div>
       <div class="kc org"><div class="lb">月底结余</div><div class="amt">¥${endBal.toFixed(2)}</div></div>
     </div>
+
+    <div class="kpi-sec">🎁 奖金</div>
     <div class="kpi-r">
-      <div class="kc ylw"><div class="lb">💎 奖金总额</div><div class="amt">¥${bAmt.toFixed(2)}</div></div>
+      <div class="kc ylw"><div class="lb">奖金总额</div><div class="amt">¥${bAmt.toFixed(2)}</div></div>
       <div class="kc grn"><div class="lb">奖金已付</div><div class="amt">¥${bPaid.toFixed(2)}</div></div>
       <div class="kc ${bUnpaid>0?'red':'grn'}"><div class="lb">奖金未付</div><div class="amt">¥${bUnpaid.toFixed(2)}</div></div>
     </div>
@@ -1540,10 +1551,19 @@ function renderCustomItemsList() {
   const list = KV('customItemsList');
   list.innerHTML = customItems.map((name, idx) => `
     <div class="custom-item">
-      <span class="custom-item-name">${esc(name)}</span>
+      <span class="custom-item-name"><input value="${esc(name)}" onchange="renameCustomItem(${idx},this.value)" onfocus="this.select()"></span>
       <button class="del-btn" onclick="deleteCustomItem(${idx})">删除</button>
     </div>
   `).join('');
+}
+
+function renameCustomItem(idx, newName) {
+  newName = newName.trim();
+  if (!newName || newName === customItems[idx]) return;
+  if (customItems.includes(newName)) { alert('该项目已存在！'); renderCustomItemsList(); return; }
+  customItems[idx] = newName;
+  localStorage.setItem('shopAccount_customItems', JSON.stringify(customItems));
+  render();
 }
 
 function deleteCustomItem(idx) {
@@ -1580,10 +1600,19 @@ function renderCustomStaffItemsList() {
   const list = KV('customStaffItemsList');
   list.innerHTML = customStaffItems.map((name, idx) => `
     <div class="custom-item">
-      <span class="custom-item-name">${esc(name)}</span>
+      <span class="custom-item-name"><input value="${esc(name)}" onchange="renameCustomStaffItem(${idx},this.value)" onfocus="this.select()"></span>
       <button class="del-btn" onclick="deleteCustomStaffItem(${idx})">删除</button>
     </div>
   `).join('');
+}
+
+function renameCustomStaffItem(idx, newName) {
+  newName = newName.trim();
+  if (!newName || newName === customStaffItems[idx]) return;
+  if (customStaffItems.includes(newName)) { alert('该项目已存在！'); renderCustomStaffItemsList(); return; }
+  customStaffItems[idx] = newName;
+  localStorage.setItem('shopAccount_customStaffItems', JSON.stringify(customStaffItems));
+  render();
 }
 
 function deleteCustomStaffItem(idx) {
