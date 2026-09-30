@@ -308,7 +308,7 @@ body{background:#f5f7fa;color:#1a1a2e;max-width:500px;margin:0 auto;padding:10px
 <div class="modal" id="gistModal">
   <div class="modal-content">
     <h3>☁️ GitHub Gist 云端同步</h3>
-    <p style="font-size:11px;color:#888;margin-bottom:10px;">数据加密存储在 GitHub Gist，换设备也能恢复。</p>
+    <p style="font-size:11px;color:#888;margin-bottom:10px;">数据以私有 Gist 形式备份到 GitHub，换设备也能恢复。</p>
     <div id="gistStatus" style="font-size:12px;margin-bottom:10px;"></div>
     <label style="font-size:11px;color:#555;">GitHub Token（需 gist 权限）</label>
     <input type="password" id="gistTokenInput" placeholder="ghp_xxxxxxxxxxxx">
@@ -828,9 +828,11 @@ function pullFromGist() {
       const cloudData = JSON.parse(raw);
       restoreAllData(cloudData);
       KV('gistStatus').innerHTML = '<span style="color:#2e7d32;">✅ 拉取成功！数据已恢复 (' + new Date().toLocaleTimeString() + ')</span>';
-      // 更新门店选择器
+      // 更新门店选择器并重新加载内存数据
       const stores = JSON.parse(localStorage.getItem('shopAccount_stores') || '["默认门店"]');
+      if (!stores.includes(curStore)) curStore = stores[0] || '默认门店';
       renderStoreSelect(stores);
+      load();
       render();
     } else {
       KV('gistStatus').innerHTML = '<span style="color:#c62828;">❌ Gist 中未找到数据文件</span>';
@@ -973,12 +975,12 @@ function render() {
   customItems.forEach((name, i) => {
     const key = 'exp_' + i;
     const paid = d['exp_paid_'+i];
-    const cls = paid === true ? 'pa' : paid === false ? 'un' : '';
-    const txt = paid === true ? '已付' : paid === false ? '未付' : '';
+    const cls = paid === false ? 'un' : 'pa';
+    const txt = paid === false ? '未付' : '已付';
     eh += `<div class="gi"><div class="nm">${esc(name)}</div>
       <div class="ir">
         <input type="text" inputmode="decimal" step="0.01" value="${vv(d[key])}" oninput="upd('${key}',this)" onfocus="this.select()" ${d.lock?'disabled':''}>
-        <span class="tag ${cls}" data-pkey="exp_paid_${i}" style="${d.lock?'pointer-events:none;opacity:0.5':''}">${txt||'✔'}</span>
+        <span class="tag ${cls}" data-pkey="exp_paid_${i}" style="${d.lock?'pointer-events:none;opacity:0.5':''}">${txt}</span>
       </div></div>`;
   });
   KV('expenseGrid').innerHTML = eh;
@@ -990,12 +992,12 @@ function render() {
   customStaffItems.forEach((name, i) => {
     const key = 'staff_' + i;
     const paid = d['staff_paid_'+i];
-    const cls = paid === true ? 'pa' : paid === false ? 'un' : '';
-    const txt = paid === true ? '已付' : paid === false ? '未付' : '';
+    const cls = paid === false ? 'un' : 'pa';
+    const txt = paid === false ? '未付' : '已付';
     sh += `<div class="gi"><div class="nm">${esc(name)}</div>
       <div class="ir">
         <input type="text" inputmode="decimal" step="0.01" value="${vv(d[key])}" oninput="upd('${key}',this)" onfocus="this.select()" ${d.lock?'disabled':''}>
-        <span class="tag ${cls}" data-pkey="staff_paid_${i}" style="${d.lock?'pointer-events:none;opacity:0.5':''}">${txt||'✔'}</span>
+        <span class="tag ${cls}" data-pkey="staff_paid_${i}" style="${d.lock?'pointer-events:none;opacity:0.5':''}">${txt}</span>
       </div></div>`;
   });
   KV('salaryGrid').innerHTML = sh;
@@ -1009,9 +1011,9 @@ function render() {
   KV('bonusInput').value = vv(d['bonus'])||'';
   KV('bonusInput').disabled = d.lock;
   const bpaid = d['bonus_paid'];
-  const bcls = bpaid === true ? 'pa' : bpaid === false ? 'un' : '';
-  const btxt = bpaid === true ? '已付' : bpaid === false ? '未付' : '✔';
-  KV('bonusTag').className = 'tag '+(bcls||'');
+  const bcls = bpaid === false ? 'un' : 'pa';
+  const btxt = bpaid === false ? '未付' : '已付';
+  KV('bonusTag').className = 'tag '+bcls;
   KV('bonusTag').textContent = btxt;
   KV('bonusTag').setAttribute('data-pkey', 'bonus_paid');
 
@@ -1130,10 +1132,8 @@ function afterUpd(key) {
 
 function togglePaid(key) {
   const d = md(curMonth);
-  const cur = d[key];
-  if (cur === true) d[key] = false;
-  else if (cur === false) d[key] = undefined;
-  else d[key] = true;
+  // 已付(默认) ↔ 未付 两态切换
+  d[key] = (d[key] === false) ? true : false;
   save();
   render();
 }
@@ -1205,8 +1205,8 @@ function calcAll() {
   customItems.forEach((name, i) => {
     const amt = vv(d['exp_'+i]);
     const paid = d['exp_paid_'+i];
-    if (paid === true) expPaid += amt;
-    else if (paid === false) expUnpaid += amt;
+    if (paid === false) expUnpaid += amt;
+    else expPaid += amt;
   });
 
   // Staff (使用自定义项)
@@ -1214,14 +1214,14 @@ function calcAll() {
   customStaffItems.forEach((name, i) => {
     const amt = vv(d['staff_'+i]);
     const paid = d['staff_paid_'+i];
-    if (paid === true) staPaid += amt;
-    else if (paid === false) staUnpaid += amt;
+    if (paid === false) staUnpaid += amt;
+    else staPaid += amt;
   });
 
-  // Bonus
+  // Bonus（默认视为已付，只有明确标记"未付"才算未付）
   const bAmt = vv(d['bonus']);
-  const bPaid = d['bonus_paid'] === true ? bAmt : 0;
   const bUnpaid = d['bonus_paid'] === false ? bAmt : 0;
+  const bPaid = d['bonus_paid'] === false ? 0 : bAmt;
 
   // Total expense（不含奖金，奖金只在月底结余中单独计算）
   let totalExp = 0;
@@ -1254,8 +1254,8 @@ function calcAll() {
   // 可支配结余 = 资金总余额 − 应付(不含奖金) − 奖金未付 − 剩余未付上月
   const currBal = fundTotal - unpaidAll - bUnpaid - remainingLastUnpaid;
 
-  // 月底结余 = 资金 - 应付(不含奖金) - 已付奖金 - 剩余未付上月
-  const endBal = fundTotal - unpaidAll - bPaid - remainingLastUnpaid;
+  // 月底结余 = 资金 - 应付(不含奖金) - 未付奖金 - 剩余未付上月
+  const endBal = fundTotal - unpaidAll - bUnpaid - remainingLastUnpaid;
 
   // Render KPI
   KV('kpiArea').innerHTML = `
@@ -1304,7 +1304,7 @@ function calcAll() {
     <div class="fs-row"><span>账面应余额 = 上月结余 + 总收入 - 已付 - 奖金已付 - 本月偿还上月</span><span class="v g">¥${bookBal.toFixed(2)}</span></div>
     <div class="fs-row"><span>盘盈/盘亏 = 资金总余额 - 账面应余额</span><span class="v ${diff>=0?'g':'r'}">¥${diff.toFixed(2)} ${diff>0?'(盘盈)':diff<0?'(盘亏)':'(相符)'}</span></div>
     <div class="fs-row"><span>可支配结余 = 资金 - 应付 - 奖金未付(${bUnpaid.toFixed(2)}) - 剩余未付上月(${remainingLastUnpaid.toFixed(2)})</span><span class="v b">¥${currBal.toFixed(2)}</span></div>
-    <div class="fs-row"><span>月底结余 = 资金 − 应付(${unpaidAll.toFixed(2)}) − 已付奖金(${bPaid.toFixed(2)}) − 剩余未付上月(${remainingLastUnpaid.toFixed(2)})</span><span class="v o">¥${endBal.toFixed(2)}</span></div>
+    <div class="fs-row"><span>月底结余 = 资金 − 应付(${unpaidAll.toFixed(2)}) − 未付奖金(${bUnpaid.toFixed(2)}) − 剩余未付上月(${remainingLastUnpaid.toFixed(2)})</span><span class="v o">¥${endBal.toFixed(2)}</span></div>
   `;
 }
 
@@ -1341,6 +1341,11 @@ function parseCSVLine(line) {
   return result;
 }
 
+function csvCell(v) {
+  const s = (v === undefined || v === null) ? '' : String(v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
 function exportAllData() {
   modalMode = 'export';
   KV('modalTitle').textContent = '📤 导出CSV（手机Excel/WPS打开）';
@@ -1357,7 +1362,7 @@ function exportAllData() {
   header.push('月底奖金','奖金已付?');
   FUND_KEY.forEach((k,i) => header.push(FUND_LB[i]+'(资金)'));
 
-  let csv = header.join(',') + '\n';
+  let csv = header.map(csvCell).join(',') + '\n';
 
   // 添加数据行
   stores.forEach(store => {
@@ -1384,7 +1389,7 @@ function exportAllData() {
       row.push(vv(d['bonus']), d['bonus_paid']===true?'是':d['bonus_paid']===false?'否':'');
       FUND_KEY.forEach(k => row.push(vv(d['fund_'+k])));
 
-      csv += row.join(',') + '\n';
+      csv += row.map(csvCell).join(',') + '\n';
     });
   });
 
@@ -1488,10 +1493,12 @@ function confirmModal() {
       }
 
       // 保存门店列表
-      localStorage.setItem('shopAccount_stores', JSON.stringify([...stores]));
-      renderStoreSelect([...stores]);
+      const storeArr = [...stores];
+      localStorage.setItem('shopAccount_stores', JSON.stringify(storeArr));
+      if (!storeArr.includes(curStore)) curStore = storeArr[0] || '默认门店';
+      renderStoreSelect(storeArr);
 
-      alert('导入成功！共导入 ' + stores.size + ' 个门店的数据');
+      alert('导入成功！共导入 ' + storeArr.length + ' 个门店的数据');
       load();
       render();
     } catch(e) {
